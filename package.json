@@ -1,0 +1,13 @@
+{
+	"name": "starling-server",
+	"scripts": {
+		"dev": "bun run --hot src/index.tsx"
+	},
+	"dependencies": {
+		"hono": "^4.10.4"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.4",
+		"@types/bun": "latest"
+	}
+}
