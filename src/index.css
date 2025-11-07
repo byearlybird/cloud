@@ -2,7 +2,7 @@
 
 @layer base {
 	:root {
-		@apply text-[rgba(255, 255, 255, 0.87)] bg-[#242424] font-sans;
+		@apply font-sans;
 	}
 
 	body {
@@ -16,7 +16,6 @@ body::before {
 	inset: 0;
 	z-index: -1;
 	opacity: 0.05;
-	background: url("./logo.svg");
 	background-size: 256px;
 	transform: rotate(-12deg) scale(1.35);
 	animation: slide 30s linear infinite;
