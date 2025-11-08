@@ -5,6 +5,7 @@ import type { JwtVariables } from "hono/jwt";
 import { jwt } from "hono/jwt";
 import { createStorage } from "unstorage";
 import fsDriver from "unstorage/drivers/fs";
+import { collectionSchema } from "./schemas";
 import { AuthService, newUserSchema, signInSchema } from "./services/auth";
 import { CollectionService } from "./services/collection";
 
@@ -79,16 +80,20 @@ const app = new Hono<{ Variables: JwtVariables }>()
 
 		return c.json(collection, 200);
 	})
-	.put("/collection/:key", async (c) => {
-		const payload = c.get("jwtPayload");
-		const userId = payload.sub as string;
-		const key = c.req.param("key");
+	.put(
+		"/collection/:key",
+		zValidator("json", collectionSchema),
+		async (c) => {
+			const payload = c.get("jwtPayload");
+			const userId = payload.sub as string;
+			const key = c.req.param("key");
 
-		const collection = (await c.req.json()) as Collection;
+			const collection = c.req.valid("json") as Collection;
 
-		await collectionService.mergeCollection(userId, key, collection);
+			await collectionService.mergeCollection(userId, key, collection);
 
-		return c.json({ success: true }, 200);
-	});
+			return c.json({ success: true }, 200);
+		},
+	);
 
 export default app;
