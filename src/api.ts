@@ -1,9 +1,10 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { createMiddleware } from "hono/factory";
+import { jwt } from "hono/jwt";
+import type { JwtVariables } from "hono/jwt";
 import { createStorage } from "unstorage";
 import fsDriver from "unstorage/drivers/fs";
-import { AuthService, newUserSchema, signInSchema, type TokenPayload } from "./services/auth";
+import { AuthService, newUserSchema, signInSchema } from "./services/auth";
 
 const storage = createStorage({
 	driver: fsDriver({ base: "./data" }),
@@ -17,36 +18,7 @@ const authService = new AuthService(storage, JWT_SECRET);
 // Create a register request schema - only email and password from newUserSchema
 const registerSchema = newUserSchema.pick({ email: true, password: true });
 
-// Authentication middleware
-const authMiddleware = createMiddleware<{
-	Variables: {
-		user: TokenPayload;
-	};
-}>(async (c, next) => {
-	const authHeader = c.req.header("Authorization");
-
-	if (!authHeader) {
-		return c.json({ error: "Missing authorization header" }, 401);
-	}
-
-	// Extract token from "Bearer <token>" format
-	const token = authHeader.startsWith("Bearer ")
-		? authHeader.slice(7)
-		: authHeader;
-
-	const result = await authService.validateToken(token);
-
-	if (!result.ok) {
-		return c.json({ error: "Invalid or expired token" }, 401);
-	}
-
-	// Set user in context for use in handlers
-	c.set("user", result.val);
-
-	await next();
-});
-
-const app = new Hono()
+const app = new Hono<{ Variables: JwtVariables }>()
 	.basePath("/api")
 	.post("/auth/signin", zValidator("json", signInSchema), async (c) => {
 		const { email, password } = c.req.valid("json");
@@ -86,27 +58,28 @@ const app = new Hono()
 				return c.json({ error: "Unknown error" }, 500);
 		}
 	})
-	// Protected collection routes
-	.get("/collection/:key", authMiddleware, (c) => {
-		const user = c.get("user");
-		console.log("Authenticated user:", user.email);
+	// Protected collection routes - use built-in JWT middleware
+	.use("/collection/*", jwt({ secret: JWT_SECRET }))
+	.get("/collection/:key", (c) => {
+		const payload = c.get("jwtPayload");
+		console.log("Authenticated user:", payload.email);
 		return c.json({
 			message: "Hello from Hono!",
 			method: "GET",
 			user: {
-				id: user.id,
-				email: user.email,
+				id: payload.id,
+				email: payload.email,
 			},
 		});
 	})
-	.put("/collection/:key", authMiddleware, (c) => {
-		const user = c.get("user");
+	.put("/collection/:key", (c) => {
+		const payload = c.get("jwtPayload");
 		return c.json({
 			message: "Hello, world!",
 			method: "PUT",
 			user: {
-				id: user.id,
-				email: user.email,
+				id: payload.id,
+				email: payload.email,
 			},
 		});
 	});
