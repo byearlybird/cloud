@@ -1,29 +1,12 @@
 import { sign } from "hono/jwt";
 import { Err, Ok, type Result } from "ts-results";
 import { prefixStorage, type Storage } from "unstorage";
-
-import z from "zod";
-
-const userSchema = z.object({
-	id: z.uuid(),
-	email: z.email(),
-	hashedPassword: z.string(),
-	createdAt: z.iso.datetime(),
-});
-
-export type User = z.infer<typeof userSchema>;
-
-export const newUserSchema = z.object({
-	id: z.uuid().default(() => crypto.randomUUID()),
-	email: z.email(),
-	password: z.string().min(8),
-	createdAt: z.iso.datetime().default(() => new Date().toISOString()),
-});
-
-export const signInSchema = z.object({
-	email: z.email(),
-	password: z.string(),
-});
+import {
+	newUserSchema,
+	signInSchema,
+	userSchema,
+	type User,
+} from "../schemas";
 
 export class AuthService {
 	#storage: Storage<User>;

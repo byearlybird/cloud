@@ -1,6 +1,44 @@
 import { z } from "zod";
 
 /**
+ * Authentication Schemas
+ */
+
+/**
+ * Internal user schema with hashed password
+ */
+export const userSchema = z.object({
+	id: z.uuid(),
+	email: z.email(),
+	hashedPassword: z.string(),
+	createdAt: z.iso.datetime(),
+});
+
+/**
+ * Schema for creating new users
+ */
+export const newUserSchema = z.object({
+	id: z.uuid().default(() => crypto.randomUUID()),
+	email: z.email(),
+	password: z.string().min(8),
+	createdAt: z.iso.datetime().default(() => new Date().toISOString()),
+});
+
+/**
+ * Schema for user sign-in
+ */
+export const signInSchema = z.object({
+	email: z.email(),
+	password: z.string(),
+});
+
+export type User = z.infer<typeof userSchema>;
+
+/**
+ * Collection Schemas
+ */
+
+/**
  * Zod schema for EncodedValue<T>
  * A primitive value wrapped with its eventstamp for Last-Write-Wins conflict resolution
  */

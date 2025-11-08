@@ -5,8 +5,12 @@ import type { JwtVariables } from "hono/jwt";
 import { jwt } from "hono/jwt";
 import { createStorage } from "unstorage";
 import fsDriver from "unstorage/drivers/fs";
-import { collectionSchema } from "./schemas";
-import { AuthService, newUserSchema, signInSchema } from "./services/auth";
+import {
+	collectionSchema,
+	newUserSchema,
+	signInSchema,
+} from "./schemas";
+import { AuthService } from "./services/auth";
 import { CollectionService } from "./services/collection";
 
 const storage = createStorage({
