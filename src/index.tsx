@@ -1,22 +1,6 @@
 import { serve } from "bun";
-import { Hono } from "hono";
+import app from "./api";
 import index from "./index.html";
-
-const app = new Hono().basePath("/api");
-
-app.get("/hello", (c) => {
-	console.log("Hono hello");
-	return c.json({
-		message: "Hello from Hono!",
-		method: "GET",
-	});
-});
-app.put("/hello", (c) =>
-	c.json({
-		message: "Hello, world!",
-		method: "PUT",
-	}),
-);
 
 const server = serve({
 	routes: {
