@@ -37,9 +37,7 @@ const authMiddleware = createMiddleware<{
 	const result = await authService.validateToken(token);
 
 	if (!result.ok) {
-		const errorMessage =
-			result.val === "expired_token" ? "Token has expired" : "Invalid token";
-		return c.json({ error: errorMessage }, 401);
+		return c.json({ error: "Invalid or expired token" }, 401);
 	}
 
 	// Set user in context for use in handlers

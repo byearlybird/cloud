@@ -110,15 +110,9 @@ export class AuthService {
 
 	async validateToken(
 		token: string,
-	): Promise<Result<TokenPayload, "invalid_token" | "expired_token">> {
+	): Promise<Result<TokenPayload, "invalid_token">> {
 		try {
 			const payload = await verify(token, this.#jwtSecret);
-
-			// Check if token is expired
-			const now = Math.floor(Date.now() / 1000);
-			if (payload.exp && payload.exp < now) {
-				return Err("expired_token");
-			}
 
 			// Validate payload structure
 			if (
@@ -131,6 +125,7 @@ export class AuthService {
 
 			return Ok(payload as TokenPayload);
 		} catch (_error) {
+			// verify() will throw if token is expired, invalid signature, etc.
 			return Err("invalid_token");
 		}
 	}
