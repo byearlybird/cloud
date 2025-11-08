@@ -1,3 +1,4 @@
+import type { Collection } from "@byearlybird/starling";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import type { JwtVariables } from "hono/jwt";
@@ -5,6 +6,7 @@ import { jwt } from "hono/jwt";
 import { createStorage } from "unstorage";
 import fsDriver from "unstorage/drivers/fs";
 import { AuthService, newUserSchema, signInSchema } from "./services/auth";
+import { CollectionService } from "./services/collection";
 
 const storage = createStorage({
 	driver: fsDriver({ base: "./data" }),
@@ -15,6 +17,7 @@ const JWT_SECRET =
 	process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
 const authService = new AuthService(storage, JWT_SECRET);
+const collectionService = new CollectionService(storage);
 
 // Create a register request schema - only email and password from newUserSchema
 const registerSchema = newUserSchema.pick({ email: true, password: true });
@@ -63,28 +66,29 @@ const app = new Hono<{ Variables: JwtVariables }>()
 	})
 	// Protected collection routes - use built-in JWT middleware
 	.use("/collection/*", jwt({ secret: JWT_SECRET }))
-	.get("/collection/:key", (c) => {
+	.get("/collection/:key", async (c) => {
 		const payload = c.get("jwtPayload");
-		console.log("Authenticated user:", payload.email);
-		return c.json({
-			message: "Hello from Hono!",
-			method: "GET",
-			user: {
-				id: payload.sub, // Standard JWT 'sub' claim contains user ID
-				email: payload.email,
-			},
-		});
+		const userId = payload.sub as string;
+		const key = c.req.param("key");
+
+		const collection = await collectionService.getCollection(userId, key);
+
+		if (!collection) {
+			return c.json({ error: "Collection not found" }, 404);
+		}
+
+		return c.json(collection, 200);
 	})
-	.put("/collection/:key", (c) => {
+	.put("/collection/:key", async (c) => {
 		const payload = c.get("jwtPayload");
-		return c.json({
-			message: "Hello, world!",
-			method: "PUT",
-			user: {
-				id: payload.sub, // Standard JWT 'sub' claim contains user ID
-				email: payload.email,
-			},
-		});
+		const userId = payload.sub as string;
+		const key = c.req.param("key");
+
+		const collection = (await c.req.json()) as Collection;
+
+		await collectionService.mergeCollection(userId, key, collection);
+
+		return c.json({ success: true }, 200);
 	});
 
 export default app;
