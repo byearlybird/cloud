@@ -15,3 +15,13 @@ declare module "*.module.css" {
 	const classes: { readonly [key: string]: string };
 	export = classes;
 }
+
+// Environment variables
+declare module "bun" {
+	interface Env {
+		ACCESS_TOKEN_SECRET: string;
+		REFRESH_TOKEN_SECRET: string;
+		ACCESS_TOKEN_EXPIRY?: string;
+		REFRESH_TOKEN_EXPIRY?: string;
+	}
+}

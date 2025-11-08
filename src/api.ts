@@ -1,113 +1,18 @@
-import type { Collection } from "@byearlybird/starling";
-import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import type { JwtVariables } from "hono/jwt";
-import { jwt } from "hono/jwt";
-import { createStorage } from "unstorage";
-import fsDriver from "unstorage/drivers/fs";
-import {
-	collectionSchema,
-	newUserSchema,
-	refreshTokenSchema,
-	signInSchema,
-} from "./schemas";
-import { AuthService } from "./services/auth";
-import { CollectionService } from "./services/collection";
+import { env } from "./env";
+import { createAuthRoutes } from "./routes/auth";
+import { createCollectionRoutes } from "./routes/collection";
+import { createServices } from "./services";
 
-const storage = createStorage({
-	driver: fsDriver({ base: "./data" }),
-});
+// All services created and registered in one place
+const services = createServices(env);
 
-const authService = new AuthService(
-	storage,
-	Bun.env.ACCESS_TOKEN_SECRET,
-	Bun.env.REFRESH_TOKEN_SECRET,
-);
-
-const collectionService = new CollectionService(storage);
-
-// Create a register request schema - only email and password from newUserSchema
-const registerSchema = newUserSchema.pick({ email: true, password: true });
-
-const app = new Hono<{ Variables: JwtVariables }>()
+const app = new Hono()
 	.basePath("/api")
-	.post("/auth/signin", zValidator("json", signInSchema), async (c) => {
-		const { email, password } = c.req.valid("json");
-		const result = await authService.signIn(email, password);
-
-		if (result.ok) {
-			const { user, accessToken, refreshToken } = result.val;
-			return c.json({ accessToken, refreshToken, user }, 200);
-		}
-
-		switch (result.val) {
-			case "user_not_found":
-				// use 401 for obscurity
-				return c.json({ error: "Invalid email or password" }, 401);
-			case "invalid_credentials":
-				return c.json({ error: "Invalid email or password" }, 401);
-			default:
-				return c.json({ error: "Unknown error" }, 500);
-		}
-	})
-	.post("/auth/signup", zValidator("json", registerSchema), async (c) => {
-		const { email, password } = c.req.valid("json");
-		const result = await authService.register(email, password);
-
-		if (result.ok) {
-			return c.json(result.val, 201);
-		}
-
-		switch (result.val) {
-			case "already_exists":
-				return c.json({ error: "User already exists" }, 409);
-			case "invalid_data":
-				return c.json({ error: "Invalid data" }, 400);
-			default:
-				return c.json({ error: "Unknown error" }, 500);
-		}
-	})
-	.post("/auth/refresh", zValidator("json", refreshTokenSchema), async (c) => {
-		const { refreshToken } = c.req.valid("json");
-		const result = await authService.refreshAccessToken(refreshToken);
-
-		if (result.ok) {
-			const { accessToken, refreshToken: newRefreshToken } = result.val;
-			return c.json({ accessToken, refreshToken: newRefreshToken }, 200);
-		}
-
-		return c.json({ error: "Invalid or expired refresh token" }, 401);
-	})
-	.post("/auth/logout", zValidator("json", refreshTokenSchema), async (c) => {
-		const { refreshToken } = c.req.valid("json");
-		await authService.logout(refreshToken);
-		return c.json({ success: true }, 200);
-	})
-	// Protected collection routes - use built-in JWT middleware with access token secret
-	.use("/collection/*", jwt({ secret: Bun.env.ACCESS_TOKEN_SECRET }))
-	.get("/collection/:key", async (c) => {
-		const payload = c.get("jwtPayload");
-		const userId = payload.sub as string;
-		const key = c.req.param("key");
-
-		const collection = await collectionService.getCollection(userId, key);
-
-		if (!collection) {
-			return c.json({ error: "Collection not found" }, 404);
-		}
-
-		return c.json(collection, 200);
-	})
-	.put("/collection/:key", zValidator("json", collectionSchema), async (c) => {
-		const payload = c.get("jwtPayload");
-		const userId = payload.sub as string;
-		const key = c.req.param("key");
-
-		const collection = c.req.valid("json") as Collection;
-
-		await collectionService.mergeCollection(userId, key, collection);
-
-		return c.json({ success: true }, 200);
-	});
+	.route("/auth", createAuthRoutes(services.auth))
+	.route(
+		"/collection",
+		createCollectionRoutes(services.collection, env.ACCESS_TOKEN_SECRET),
+	);
 
 export default app;

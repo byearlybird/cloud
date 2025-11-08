@@ -2,23 +2,25 @@ import { decode, sign, verify } from "hono/jwt";
 import { Err, Ok, type Result } from "ts-results";
 import { prefixStorage, type Storage } from "unstorage";
 
-// Token expiry constants
-const ACCESS_TOKEN_EXPIRY = 15 * 60; // 15 minutes in seconds
-const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60; // 7 days in seconds
-
 export class TokenService {
 	#storage: Storage<string>;
 	#accessTokenSecret: string;
 	#refreshTokenSecret: string;
+	#accessTokenExpiry: number;
+	#refreshTokenExpiry: number;
 
 	constructor(
 		storage: Storage,
 		accessTokenSecret: string,
 		refreshTokenSecret: string,
+		accessTokenExpiry: number,
+		refreshTokenExpiry: number,
 	) {
 		this.#storage = prefixStorage<string>(storage, "token");
 		this.#accessTokenSecret = accessTokenSecret;
 		this.#refreshTokenSecret = refreshTokenSecret;
+		this.#accessTokenExpiry = accessTokenExpiry;
+		this.#refreshTokenExpiry = refreshTokenExpiry;
 	}
 
 	async generateAccessToken(user: {
@@ -28,7 +30,7 @@ export class TokenService {
 		const payload = {
 			sub: user.id, // Standard JWT claim for user identifier
 			email: user.email,
-			exp: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_EXPIRY,
+			exp: Math.floor(Date.now() / 1000) + this.#accessTokenExpiry,
 		};
 
 		return await sign(payload, this.#accessTokenSecret);
@@ -41,7 +43,7 @@ export class TokenService {
 		const payload = {
 			sub: user.id, // Standard JWT claim for user identifier
 			email: user.email,
-			exp: Math.floor(Date.now() / 1000) + REFRESH_TOKEN_EXPIRY,
+			exp: Math.floor(Date.now() / 1000) + this.#refreshTokenExpiry,
 		};
 
 		return await sign(payload, this.#refreshTokenSecret);
