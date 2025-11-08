@@ -5,7 +5,12 @@ import type { JwtVariables } from "hono/jwt";
 import { jwt } from "hono/jwt";
 import { createStorage } from "unstorage";
 import fsDriver from "unstorage/drivers/fs";
-import { collectionSchema, newUserSchema, signInSchema, refreshTokenSchema } from "./schemas";
+import {
+	collectionSchema,
+	newUserSchema,
+	refreshTokenSchema,
+	signInSchema,
+} from "./schemas";
 import { AuthService } from "./services/auth";
 import { CollectionService } from "./services/collection";
 
@@ -13,13 +18,12 @@ const storage = createStorage({
 	driver: fsDriver({ base: "./data" }),
 });
 
-// JWT secrets - in production, these should be from environment variables
-const ACCESS_TOKEN_SECRET =
-	Bun.env.ACCESS_TOKEN_SECRET || "your-access-token-secret-change-in-production";
-const REFRESH_TOKEN_SECRET =
-	Bun.env.REFRESH_TOKEN_SECRET || "your-refresh-token-secret-change-in-production";
+const authService = new AuthService(
+	storage,
+	Bun.env.ACCESS_TOKEN_SECRET,
+	Bun.env.REFRESH_TOKEN_SECRET,
+);
 
-const authService = new AuthService(storage, ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET);
 const collectionService = new CollectionService(storage);
 
 // Create a register request schema - only email and password from newUserSchema
@@ -32,17 +36,8 @@ const app = new Hono<{ Variables: JwtVariables }>()
 		const result = await authService.signIn(email, password);
 
 		if (result.ok) {
-			const user = result.val;
-
-			// Generate both access and refresh tokens
-			const accessToken = await authService.generateAccessToken(user);
-			const refreshToken = await authService.generateRefreshToken(user);
-
-			return c.json({
-				accessToken,
-				refreshToken,
-				user
-			}, 200);
+			const { user, accessToken, refreshToken } = result.val;
+			return c.json({ accessToken, refreshToken, user }, 200);
 		}
 
 		switch (result.val) {
@@ -74,24 +69,22 @@ const app = new Hono<{ Variables: JwtVariables }>()
 	})
 	.post("/auth/refresh", zValidator("json", refreshTokenSchema), async (c) => {
 		const { refreshToken } = c.req.valid("json");
-		const result = await authService.verifyRefreshToken(refreshToken);
+		const result = await authService.refreshAccessToken(refreshToken);
 
 		if (result.ok) {
-			const { sub, email } = result.val;
-
-			// Generate a new access token
-			const accessToken = await authService.generateAccessToken({
-				id: sub,
-				email,
-			});
-
-			return c.json({ accessToken }, 200);
+			const { accessToken, refreshToken: newRefreshToken } = result.val;
+			return c.json({ accessToken, refreshToken: newRefreshToken }, 200);
 		}
 
 		return c.json({ error: "Invalid or expired refresh token" }, 401);
 	})
+	.post("/auth/logout", zValidator("json", refreshTokenSchema), async (c) => {
+		const { refreshToken } = c.req.valid("json");
+		await authService.logout(refreshToken);
+		return c.json({ success: true }, 200);
+	})
 	// Protected collection routes - use built-in JWT middleware with access token secret
-	.use("/collection/*", jwt({ secret: ACCESS_TOKEN_SECRET }))
+	.use("/collection/*", jwt({ secret: Bun.env.ACCESS_TOKEN_SECRET }))
 	.get("/collection/:key", async (c) => {
 		const payload = c.get("jwtPayload");
 		const userId = payload.sub as string;

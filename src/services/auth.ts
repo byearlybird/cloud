@@ -1,12 +1,11 @@
-import { sign, verify } from "hono/jwt";
 import { Err, Ok, type Result } from "ts-results";
 import { prefixStorage, type Storage } from "unstorage";
 import { newUserSchema, type User } from "../schemas";
+import { TokenService } from "./token";
 
 export class AuthService {
 	#storage: Storage<User>;
-	#accessTokenSecret: string;
-	#refreshTokenSecret: string;
+	#tokenService: TokenService;
 
 	constructor(
 		storage: Storage,
@@ -14,8 +13,11 @@ export class AuthService {
 		refreshTokenSecret: string,
 	) {
 		this.#storage = prefixStorage<User>(storage, "auth");
-		this.#accessTokenSecret = accessTokenSecret;
-		this.#refreshTokenSecret = refreshTokenSecret;
+		this.#tokenService = new TokenService(
+			storage,
+			accessTokenSecret,
+			refreshTokenSecret,
+		);
 	}
 
 	async register(
@@ -48,7 +50,8 @@ export class AuthService {
 
 		await this.#storage.set(user.email, user);
 
-		return Ok(user);
+		const { hashedPassword: _, ...userWithoutPassword } = user;
+		return Ok(userWithoutPassword);
 	}
 
 	async signIn(
@@ -56,7 +59,11 @@ export class AuthService {
 		password: string,
 	): Promise<
 		Result<
-			Omit<User, "hashedPassword">,
+			{
+				user: Omit<User, "hashedPassword">;
+				accessToken: string;
+				refreshToken: string;
+			},
 			"invalid_credentials" | "user_not_found"
 		>
 	> {
@@ -76,41 +83,47 @@ export class AuthService {
 		}
 
 		const { hashedPassword: _, ...userWithoutPassword } = user;
-		return Ok(userWithoutPassword);
+
+		// Generate tokens after successful authentication
+		const accessToken = await this.#tokenService.generateAccessToken(
+			userWithoutPassword,
+		);
+		const refreshToken = await this.#tokenService.generateRefreshToken(
+			userWithoutPassword,
+		);
+
+		return Ok({ user: userWithoutPassword, accessToken, refreshToken });
 	}
 
-	async generateAccessToken(user: { id: string; email: string }): Promise<string> {
-		const payload = {
-			sub: user.id, // Standard JWT claim for user identifier
-			email: user.email,
-			exp: Math.floor(Date.now() / 1000) + 60 * 15, // 15 minutes
-		};
+	async refreshAccessToken(
+		refreshToken: string,
+	): Promise<Result<{ accessToken: string; refreshToken: string }, "invalid_token">> {
+		// Verify the refresh token
+		const verifyResult = await this.#tokenService.verifyRefreshToken(refreshToken);
 
-		return await sign(payload, this.#accessTokenSecret);
-	}
-
-	async generateRefreshToken(user: { id: string; email: string }): Promise<string> {
-		const payload = {
-			sub: user.id, // Standard JWT claim for user identifier
-			email: user.email,
-			exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
-		};
-
-		return await sign(payload, this.#refreshTokenSecret);
-	}
-
-	async verifyRefreshToken(
-		token: string,
-	): Promise<Result<{ sub: string; email: string }, "invalid_token">> {
-		try {
-			const payload = await verify(token, this.#refreshTokenSecret);
-			return Ok({ sub: payload.sub as string, email: payload.email as string });
-		} catch {
+		if (!verifyResult.ok) {
 			return Err("invalid_token");
 		}
+
+		const { sub, email } = verifyResult.val;
+
+		// Revoke the old refresh token
+		await this.#tokenService.revokeRefreshToken(refreshToken);
+
+		// Generate new tokens (token rotation)
+		const accessToken = await this.#tokenService.generateAccessToken({
+			id: sub,
+			email,
+		});
+		const newRefreshToken = await this.#tokenService.generateRefreshToken({
+			id: sub,
+			email,
+		});
+
+		return Ok({ accessToken, refreshToken: newRefreshToken });
 	}
 
-	getAccessTokenSecret(): string {
-		return this.#accessTokenSecret;
+	async logout(refreshToken: string): Promise<void> {
+		await this.#tokenService.revokeRefreshToken(refreshToken);
 	}
 }
