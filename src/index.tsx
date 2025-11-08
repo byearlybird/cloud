@@ -9,7 +9,7 @@ const server = serve({
 		"/api/*": app.fetch,
 	},
 
-	development: process.env.NODE_ENV !== "production" && {
+	development: Bun.env.NODE_ENV !== "production" && {
 		// Enable browser hot reloading in development
 		hmr: true,
 
