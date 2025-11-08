@@ -1,6 +1,6 @@
 import { Err, Ok, type Result } from "ts-results";
 import { prefixStorage, type Storage } from "unstorage";
-import { sign, verify } from "hono/jwt";
+import { sign } from "hono/jwt";
 
 import z from "zod";
 
@@ -24,12 +24,6 @@ export const signInSchema = z.object({
 	email: z.email(),
 	password: z.string(),
 });
-
-export type TokenPayload = {
-	id: string;
-	email: string;
-	exp: number;
-};
 
 export class AuthService {
 	#storage: Storage<User>;
@@ -99,34 +93,12 @@ export class AuthService {
 	}
 
 	async generateToken(user: Omit<User, "hashedPassword">): Promise<string> {
-		const payload: TokenPayload = {
+		const payload = {
 			id: user.id,
 			email: user.email,
 			exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
 		};
 
 		return await sign(payload, this.#jwtSecret);
-	}
-
-	async validateToken(
-		token: string,
-	): Promise<Result<TokenPayload, "invalid_token">> {
-		try {
-			const payload = await verify(token, this.#jwtSecret);
-
-			// Validate payload structure
-			if (
-				typeof payload.id !== "string" ||
-				typeof payload.email !== "string" ||
-				typeof payload.exp !== "number"
-			) {
-				return Err("invalid_token");
-			}
-
-			return Ok(payload as TokenPayload);
-		} catch (_error) {
-			// verify() will throw if token is expired, invalid signature, etc.
-			return Err("invalid_token");
-		}
 	}
 }
