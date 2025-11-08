@@ -5,7 +5,7 @@ import type { JwtVariables } from "hono/jwt";
 import { jwt } from "hono/jwt";
 import { createStorage } from "unstorage";
 import fsDriver from "unstorage/drivers/fs";
-import { collectionSchema, newUserSchema, signInSchema } from "./schemas";
+import { collectionSchema, newUserSchema, signInSchema, refreshTokenSchema } from "./schemas";
 import { AuthService } from "./services/auth";
 import { CollectionService } from "./services/collection";
 
@@ -13,11 +13,13 @@ const storage = createStorage({
 	driver: fsDriver({ base: "./data" }),
 });
 
-// JWT secret - in production, this should be from environment variable
-const JWT_SECRET =
-	process.env.JWT_SECRET || "your-secret-key-change-in-production";
+// JWT secrets - in production, these should be from environment variables
+const ACCESS_TOKEN_SECRET =
+	process.env.ACCESS_TOKEN_SECRET || "your-access-token-secret-change-in-production";
+const REFRESH_TOKEN_SECRET =
+	process.env.REFRESH_TOKEN_SECRET || "your-refresh-token-secret-change-in-production";
 
-const authService = new AuthService(storage, JWT_SECRET);
+const authService = new AuthService(storage, ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET);
 const collectionService = new CollectionService(storage);
 
 // Create a register request schema - only email and password from newUserSchema
@@ -32,10 +34,15 @@ const app = new Hono<{ Variables: JwtVariables }>()
 		if (result.ok) {
 			const user = result.val;
 
-			// Generate JWT token using AuthService
-			const token = await authService.generateToken(user);
+			// Generate both access and refresh tokens
+			const accessToken = await authService.generateAccessToken(user);
+			const refreshToken = await authService.generateRefreshToken(user);
 
-			return c.json({ token, user }, 200);
+			return c.json({
+				accessToken,
+				refreshToken,
+				user
+			}, 200);
 		}
 
 		switch (result.val) {
@@ -65,8 +72,27 @@ const app = new Hono<{ Variables: JwtVariables }>()
 				return c.json({ error: "Unknown error" }, 500);
 		}
 	})
-	// Protected collection routes - use built-in JWT middleware
-	.use("/collection/*", jwt({ secret: JWT_SECRET }))
+	.post("/auth/refresh", zValidator("json", refreshTokenSchema), async (c) => {
+		const { refreshToken } = c.req.valid("json");
+		const result = await authService.verifyRefreshToken(refreshToken);
+
+		if (result.ok) {
+			const { sub, email } = result.val;
+
+			// Generate a new access token
+			const accessToken = await authService.generateAccessToken({
+				id: sub,
+				email,
+				createdAt: new Date().toISOString(),
+			});
+
+			return c.json({ accessToken }, 200);
+		}
+
+		return c.json({ error: "Invalid or expired refresh token" }, 401);
+	})
+	// Protected collection routes - use built-in JWT middleware with access token secret
+	.use("/collection/*", jwt({ secret: ACCESS_TOKEN_SECRET }))
 	.get("/collection/:key", async (c) => {
 		const payload = c.get("jwtPayload");
 		const userId = payload.sub as string;

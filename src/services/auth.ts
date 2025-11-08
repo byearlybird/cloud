@@ -1,15 +1,21 @@
-import { sign } from "hono/jwt";
+import { sign, verify } from "hono/jwt";
 import { Err, Ok, type Result } from "ts-results";
 import { prefixStorage, type Storage } from "unstorage";
 import { newUserSchema, type User } from "../schemas";
 
 export class AuthService {
 	#storage: Storage<User>;
-	#jwtSecret: string;
+	#accessTokenSecret: string;
+	#refreshTokenSecret: string;
 
-	constructor(storage: Storage, jwtSecret: string) {
+	constructor(
+		storage: Storage,
+		accessTokenSecret: string,
+		refreshTokenSecret: string,
+	) {
 		this.#storage = prefixStorage<User>(storage, "auth");
-		this.#jwtSecret = jwtSecret;
+		this.#accessTokenSecret = accessTokenSecret;
+		this.#refreshTokenSecret = refreshTokenSecret;
 	}
 
 	async register(
@@ -73,13 +79,42 @@ export class AuthService {
 		return Ok(userWithoutPassword);
 	}
 
-	async generateToken(user: Omit<User, "hashedPassword">): Promise<string> {
+	async generateAccessToken(
+		user: Omit<User, "hashedPassword">,
+	): Promise<string> {
+		const payload = {
+			sub: user.id, // Standard JWT claim for user identifier
+			email: user.email,
+			exp: Math.floor(Date.now() / 1000) + 60 * 15, // 15 minutes
+		};
+
+		return await sign(payload, this.#accessTokenSecret);
+	}
+
+	async generateRefreshToken(
+		user: Omit<User, "hashedPassword">,
+	): Promise<string> {
 		const payload = {
 			sub: user.id, // Standard JWT claim for user identifier
 			email: user.email,
 			exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
 		};
 
-		return await sign(payload, this.#jwtSecret);
+		return await sign(payload, this.#refreshTokenSecret);
+	}
+
+	async verifyRefreshToken(
+		token: string,
+	): Promise<Result<{ sub: string; email: string }, "invalid_token">> {
+		try {
+			const payload = await verify(token, this.#refreshTokenSecret);
+			return Ok({ sub: payload.sub as string, email: payload.email as string });
+		} catch {
+			return Err("invalid_token");
+		}
+	}
+
+	getAccessTokenSecret(): string {
+		return this.#accessTokenSecret;
 	}
 }
