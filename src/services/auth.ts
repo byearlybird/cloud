@@ -94,7 +94,7 @@ export class AuthService {
 
 	async generateToken(user: Omit<User, "hashedPassword">): Promise<string> {
 		const payload = {
-			id: user.id,
+			sub: user.id, // Standard JWT claim for user identifier
 			email: user.email,
 			exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
 		};

@@ -67,7 +67,7 @@ const app = new Hono<{ Variables: JwtVariables }>()
 			message: "Hello from Hono!",
 			method: "GET",
 			user: {
-				id: payload.id,
+				id: payload.sub, // Standard JWT 'sub' claim contains user ID
 				email: payload.email,
 			},
 		});
@@ -78,7 +78,7 @@ const app = new Hono<{ Variables: JwtVariables }>()
 			message: "Hello, world!",
 			method: "PUT",
 			user: {
-				id: payload.id,
+				id: payload.sub, // Standard JWT 'sub' claim contains user ID
 				email: payload.email,
 			},
 		});
