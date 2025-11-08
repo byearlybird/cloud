@@ -1,3 +1,4 @@
+import { sign } from "hono/jwt";
 import { Err, Ok, type Result } from "ts-results";
 import { prefixStorage, type Storage } from "unstorage";
 
@@ -19,11 +20,18 @@ export const newUserSchema = z.object({
 	createdAt: z.iso.datetime().default(() => new Date().toISOString()),
 });
 
+export const signInSchema = z.object({
+	email: z.email(),
+	password: z.string(),
+});
+
 export class AuthService {
 	#storage: Storage<User>;
+	#jwtSecret: string;
 
-	constructor(storage: Storage) {
+	constructor(storage: Storage, jwtSecret: string) {
 		this.#storage = prefixStorage<User>(storage, "auth");
+		this.#jwtSecret = jwtSecret;
 	}
 
 	async register(
@@ -57,5 +65,43 @@ export class AuthService {
 		await this.#storage.set(user.email, user);
 
 		return Ok(user);
+	}
+
+	async signIn(
+		email: string,
+		password: string,
+	): Promise<
+		Result<
+			Omit<User, "hashedPassword">,
+			"invalid_credentials" | "user_not_found"
+		>
+	> {
+		const user = await this.#storage.get(email);
+
+		if (!user) {
+			return Err("user_not_found");
+		}
+
+		const isPasswordValid = await Bun.password.verify(
+			password,
+			user.hashedPassword,
+		);
+
+		if (!isPasswordValid) {
+			return Err("invalid_credentials");
+		}
+
+		const { hashedPassword: _, ...userWithoutPassword } = user;
+		return Ok(userWithoutPassword);
+	}
+
+	async generateToken(user: Omit<User, "hashedPassword">): Promise<string> {
+		const payload = {
+			sub: user.id, // Standard JWT claim for user identifier
+			email: user.email,
+			exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
+		};
+
+		return await sign(payload, this.#jwtSecret);
 	}
 }
