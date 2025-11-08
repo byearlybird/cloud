@@ -4,6 +4,7 @@
     "": {
       "name": "bun-react-template",
       "dependencies": {
+        "@byearlybird/starling": "^0.9.3",
         "@hono/zod-validator": "^0.7.4",
         "bun-plugin-tailwind": "^0.1.2",
         "hono": "^4.10.4",
@@ -40,6 +41,8 @@
     "@biomejs/cli-win32-arm64": ["@biomejs/cli-win32-arm64@2.3.4", "", { "os": "win32", "cpu": "arm64" }, "sha512-5TJ6JfVez+yyupJ/iGUici2wzKf0RrSAxJhghQXtAEsc67OIpdwSKAQboemILrwKfHDi5s6mu7mX+VTCTUydkw=="],
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.3.4", "", { "os": "win32", "cpu": "x64" }, "sha512-FGCijXecmC4IedQ0esdYNlMpx0Jxgf4zceCaMu6fkjWyjgn50ZQtMiqZZQ0Q/77yqPxvtkgZAvt5uGw0gAAjig=="],
+
+    "@byearlybird/starling": ["@byearlybird/starling@0.9.3", "", { "peerDependencies": { "unstorage": "^1.17.1" }, "optionalPeers": ["unstorage"] }, "sha512-Sy2FQNVndEMTqoI8mUXVmoG5xaHiM5sNUrb37MBSJDrSfpT5/rmmNUoVqC0iXM0gdjveE3sK5pEhImxE1ZPVJw=="],
 
     "@hono/zod-validator": ["@hono/zod-validator@0.7.4", "", { "peerDependencies": { "hono": ">=3.9.0", "zod": "^3.25.0 || ^4.0.0" } }, "sha512-biKGn3BRJVaftZlIPMyK+HCe/UHAjJ6sH0UyXe3+v0OcgVr9xfImDROTJFLtn9e3XEEAHGZIM9U6evu85abm8Q=="],
 
