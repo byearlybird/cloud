@@ -27,12 +27,14 @@ export class AuthService {
 	async register(
 		email: string,
 		password: string,
+		encryptedMasterKey: string,
 	): Promise<
 		Result<Omit<User, "hashedPassword">, "already_exists" | "invalid_data">
 	> {
 		const { success: newUserSuccess, data: newUser } = newUserSchema.safeParse({
 			email,
 			password,
+			encryptedMasterKey,
 		});
 
 		if (!newUserSuccess) {
@@ -50,6 +52,7 @@ export class AuthService {
 			email: newUser.email,
 			createdAt: newUser.createdAt,
 			hashedPassword,
+			encryptedMasterKey: newUser.encryptedMasterKey,
 		};
 
 		await this.#storage.set(user.email, user);

@@ -4,32 +4,39 @@ import { z } from "zod";
  * Authentication Schemas
  */
 
-/**
- * Internal user schema with hashed password
- */
-export const userSchema = z.object({
+const userBaseSchema = z.object({
 	id: z.uuid(),
 	email: z.email(),
-	hashedPassword: z.string(),
+	encryptedMasterKey: z.string(),
 	createdAt: z.iso.datetime(),
+});
+
+/**
+ * Internal user schema with hashed password and encrypted master key
+ */
+export const userSchema = userBaseSchema.extend({
+	hashedPassword: z.string(),
 });
 
 /**
  * Schema for creating new users
  */
-export const newUserSchema = z.object({
-	id: z.uuid().default(() => crypto.randomUUID()),
-	email: z.email(),
-	password: z.string().min(8),
-	createdAt: z.iso.datetime().default(() => new Date().toISOString()),
-});
+export const newUserSchema = userBaseSchema
+	.omit({ id: true, createdAt: true })
+	.extend({
+		id: z.uuid().default(() => crypto.randomUUID()),
+		password: z.string().min(8),
+		createdAt: z
+			.iso.datetime()
+			.default(() => new Date().toISOString()),
+	});
 
 /**
  * Schema for user sign-in
  */
-export const signInSchema = z.object({
-	email: z.email(),
-	password: z.string(),
+export const signInSchema = newUserSchema.pick({
+	email: true,
+	password: true,
 });
 
 /**

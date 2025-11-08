@@ -9,6 +9,7 @@ describe("AuthService", () => {
 	const refreshTokenSecret = "test-refresh-secret";
 	const accessTokenExpiry = 15 * 60; // 15 minutes
 	const refreshTokenExpiry = 7 * 24 * 60 * 60; // 7 days
+	const encryptedMasterKey = "test-encrypted-master-key";
 
 	beforeEach(() => {
 		storage = createStorage();
@@ -26,7 +27,11 @@ describe("AuthService", () => {
 			const email = "test@example.com";
 			const password = "password123";
 
-			const result = await authService.register(email, password);
+			const result = await authService.register(
+				email,
+				password,
+				encryptedMasterKey,
+			);
 
 			expect(result.ok).toBe(true);
 			if (result.ok) {
@@ -41,7 +46,7 @@ describe("AuthService", () => {
 			const email = "test@example.com";
 			const password = "password123";
 
-			await authService.register(email, password);
+			await authService.register(email, password, encryptedMasterKey);
 
 			// Verify user is stored with hashed password
 			const storedUser = await storage.getItem(`auth:${email}`);
@@ -59,8 +64,12 @@ describe("AuthService", () => {
 			const email = "duplicate@example.com";
 			const password = "password123";
 
-			await authService.register(email, password);
-			const result = await authService.register(email, password);
+			await authService.register(email, password, encryptedMasterKey);
+			const result = await authService.register(
+				email,
+				password,
+				encryptedMasterKey,
+			);
 
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
@@ -69,7 +78,11 @@ describe("AuthService", () => {
 		});
 
 		test("returns error for invalid email", async () => {
-			const result = await authService.register("invalid-email", "password123");
+			const result = await authService.register(
+				"invalid-email",
+				"password123",
+				encryptedMasterKey,
+			);
 
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
@@ -78,7 +91,11 @@ describe("AuthService", () => {
 		});
 
 		test("returns error for password shorter than 8 characters", async () => {
-			const result = await authService.register("test@example.com", "short");
+			const result = await authService.register(
+				"test@example.com",
+				"short",
+				encryptedMasterKey,
+			);
 
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
@@ -93,7 +110,7 @@ describe("AuthService", () => {
 
 		beforeEach(async () => {
 			// Register a user before each signIn test
-			await authService.register(email, password);
+			await authService.register(email, password, encryptedMasterKey);
 		});
 
 		test("successfully authenticates with valid credentials", async () => {
@@ -154,7 +171,7 @@ describe("AuthService", () => {
 		let validRefreshToken: string;
 
 		beforeEach(async () => {
-			await authService.register(email, password);
+			await authService.register(email, password, encryptedMasterKey);
 			const signInResult = await authService.signIn(email, password);
 			if (signInResult.ok) {
 				validRefreshToken = signInResult.val.refreshToken;
@@ -226,7 +243,7 @@ describe("AuthService", () => {
 		let refreshToken: string;
 
 		beforeEach(async () => {
-			await authService.register(email, password);
+			await authService.register(email, password, encryptedMasterKey);
 			const signInResult = await authService.signIn(email, password);
 			if (signInResult.ok) {
 				refreshToken = signInResult.val.refreshToken;
