@@ -1,5 +1,6 @@
 import { Err, Ok, type Result } from "ts-results";
 import { prefixStorage, type Storage } from "unstorage";
+import { sign, verify } from "hono/jwt";
 
 import z from "zod";
 
@@ -24,11 +25,19 @@ export const signInSchema = z.object({
 	password: z.string(),
 });
 
+export type TokenPayload = {
+	id: string;
+	email: string;
+	exp: number;
+};
+
 export class AuthService {
 	#storage: Storage<User>;
+	#jwtSecret: string;
 
-	constructor(storage: Storage) {
+	constructor(storage: Storage, jwtSecret: string) {
 		this.#storage = prefixStorage<User>(storage, "auth");
+		this.#jwtSecret = jwtSecret;
 	}
 
 	async register(
@@ -87,5 +96,42 @@ export class AuthService {
 
 		const { hashedPassword: _, ...userWithoutPassword } = user;
 		return Ok(userWithoutPassword);
+	}
+
+	async generateToken(user: Omit<User, "hashedPassword">): Promise<string> {
+		const payload: TokenPayload = {
+			id: user.id,
+			email: user.email,
+			exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
+		};
+
+		return await sign(payload, this.#jwtSecret);
+	}
+
+	async validateToken(
+		token: string,
+	): Promise<Result<TokenPayload, "invalid_token" | "expired_token">> {
+		try {
+			const payload = await verify(token, this.#jwtSecret);
+
+			// Check if token is expired
+			const now = Math.floor(Date.now() / 1000);
+			if (payload.exp && payload.exp < now) {
+				return Err("expired_token");
+			}
+
+			// Validate payload structure
+			if (
+				typeof payload.id !== "string" ||
+				typeof payload.email !== "string" ||
+				typeof payload.exp !== "number"
+			) {
+				return Err("invalid_token");
+			}
+
+			return Ok(payload as TokenPayload);
+		} catch (_error) {
+			return Err("invalid_token");
+		}
 	}
 }

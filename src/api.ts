@@ -1,6 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { sign } from "hono/jwt";
 import { createStorage } from "unstorage";
 import fsDriver from "unstorage/drivers/fs";
 import { AuthService, newUserSchema, signInSchema } from "./services/auth";
@@ -9,10 +8,10 @@ const storage = createStorage({
 	driver: fsDriver({ base: "./data" }),
 });
 
-const authService = new AuthService(storage);
-
 // JWT secret - in production, this should be from environment variable
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+
+const authService = new AuthService(storage, JWT_SECRET);
 
 // Create a register request schema - only email and password from newUserSchema
 const registerSchema = newUserSchema.pick({ email: true, password: true });
@@ -26,15 +25,8 @@ const app = new Hono()
 		if (result.ok) {
 			const user = result.val;
 
-			// Generate JWT token with user id and email
-			const token = await sign(
-				{
-					id: user.id,
-					email: user.email,
-					exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
-				},
-				JWT_SECRET,
-			);
+			// Generate JWT token using AuthService
+			const token = await authService.generateToken(user);
 
 			return c.json({ token, user }, 200);
 		}
