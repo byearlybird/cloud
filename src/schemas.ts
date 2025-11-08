@@ -32,6 +32,13 @@ export const signInSchema = z.object({
 	password: z.string(),
 });
 
+/**
+ * Schema for refresh token request
+ */
+export const refreshTokenSchema = z.object({
+	refreshToken: z.string(),
+});
+
 export type User = z.infer<typeof userSchema>;
 
 /**
