@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { jwt } from "hono/jwt";
 import type { JwtVariables } from "hono/jwt";
+import { jwt } from "hono/jwt";
 import { createStorage } from "unstorage";
 import fsDriver from "unstorage/drivers/fs";
 import { AuthService, newUserSchema, signInSchema } from "./services/auth";
@@ -11,7 +11,8 @@ const storage = createStorage({
 });
 
 // JWT secret - in production, this should be from environment variable
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_SECRET =
+	process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
 const authService = new AuthService(storage, JWT_SECRET);
 
@@ -35,13 +36,15 @@ const app = new Hono<{ Variables: JwtVariables }>()
 
 		switch (result.val) {
 			case "user_not_found":
+				// use 401 for obscurity
+				return c.json({ error: "Invalid email or password" }, 401);
 			case "invalid_credentials":
 				return c.json({ error: "Invalid email or password" }, 401);
 			default:
 				return c.json({ error: "Unknown error" }, 500);
 		}
 	})
-	.post("/auth/register", zValidator("json", registerSchema), async (c) => {
+	.post("/auth/signup", zValidator("json", registerSchema), async (c) => {
 		const { email, password } = c.req.valid("json");
 		const result = await authService.register(email, password);
 

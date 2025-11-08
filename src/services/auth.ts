@@ -1,6 +1,6 @@
+import { sign } from "hono/jwt";
 import { Err, Ok, type Result } from "ts-results";
 import { prefixStorage, type Storage } from "unstorage";
-import { sign } from "hono/jwt";
 
 import z from "zod";
 
@@ -71,7 +71,10 @@ export class AuthService {
 		email: string,
 		password: string,
 	): Promise<
-		Result<Omit<User, "hashedPassword">, "invalid_credentials" | "user_not_found">
+		Result<
+			Omit<User, "hashedPassword">,
+			"invalid_credentials" | "user_not_found"
+		>
 	> {
 		const user = await this.#storage.get(email);
 
