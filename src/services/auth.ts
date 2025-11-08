@@ -79,9 +79,7 @@ export class AuthService {
 		return Ok(userWithoutPassword);
 	}
 
-	async generateAccessToken(
-		user: Omit<User, "hashedPassword">,
-	): Promise<string> {
+	async generateAccessToken(user: { id: string; email: string }): Promise<string> {
 		const payload = {
 			sub: user.id, // Standard JWT claim for user identifier
 			email: user.email,
@@ -91,9 +89,7 @@ export class AuthService {
 		return await sign(payload, this.#accessTokenSecret);
 	}
 
-	async generateRefreshToken(
-		user: Omit<User, "hashedPassword">,
-	): Promise<string> {
+	async generateRefreshToken(user: { id: string; email: string }): Promise<string> {
 		const payload = {
 			sub: user.id, // Standard JWT claim for user identifier
 			email: user.email,

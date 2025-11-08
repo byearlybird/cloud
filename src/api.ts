@@ -15,9 +15,9 @@ const storage = createStorage({
 
 // JWT secrets - in production, these should be from environment variables
 const ACCESS_TOKEN_SECRET =
-	process.env.ACCESS_TOKEN_SECRET || "your-access-token-secret-change-in-production";
+	Bun.env.ACCESS_TOKEN_SECRET || "your-access-token-secret-change-in-production";
 const REFRESH_TOKEN_SECRET =
-	process.env.REFRESH_TOKEN_SECRET || "your-refresh-token-secret-change-in-production";
+	Bun.env.REFRESH_TOKEN_SECRET || "your-refresh-token-secret-change-in-production";
 
 const authService = new AuthService(storage, ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET);
 const collectionService = new CollectionService(storage);
@@ -83,7 +83,6 @@ const app = new Hono<{ Variables: JwtVariables }>()
 			const accessToken = await authService.generateAccessToken({
 				id: sub,
 				email,
-				createdAt: new Date().toISOString(),
 			});
 
 			return c.json({ accessToken }, 200);
