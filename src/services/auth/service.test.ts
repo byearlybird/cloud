@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createStorage, type Storage } from "unstorage";
-import { AuthService } from "./auth";
+import { AuthService } from "./service";
 
 describe("AuthService", () => {
 	let storage: Storage;
 	let authService: AuthService;
 	const accessTokenSecret = "test-access-secret";
 	const refreshTokenSecret = "test-refresh-secret";
+	const accessTokenExpiry = 15 * 60; // 15 minutes
+	const refreshTokenExpiry = 7 * 24 * 60 * 60; // 7 days
 
 	beforeEach(() => {
 		storage = createStorage();
@@ -14,6 +16,8 @@ describe("AuthService", () => {
 			storage,
 			accessTokenSecret,
 			refreshTokenSecret,
+			accessTokenExpiry,
+			refreshTokenExpiry,
 		);
 	});
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { Collection } from "@byearlybird/starling";
 import { createStorage, type Storage } from "unstorage";
-import { CollectionService } from "./collection";
+import { CollectionService } from "./service";
 
 describe("CollectionService", () => {
 	let storage: Storage;

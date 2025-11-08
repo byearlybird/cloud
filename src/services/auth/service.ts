@@ -1,6 +1,6 @@
 import { Err, Ok, type Result } from "ts-results";
 import { prefixStorage, type Storage } from "unstorage";
-import { newUserSchema, type User } from "../schemas";
+import { newUserSchema, type User } from "./schemas";
 import { TokenService } from "./token";
 
 export class AuthService {
@@ -11,12 +11,16 @@ export class AuthService {
 		storage: Storage,
 		accessTokenSecret: string,
 		refreshTokenSecret: string,
+		accessTokenExpiry: number,
+		refreshTokenExpiry: number,
 	) {
 		this.#storage = prefixStorage<User>(storage, "auth");
 		this.#tokenService = new TokenService(
 			storage,
 			accessTokenSecret,
 			refreshTokenSecret,
+			accessTokenExpiry,
+			refreshTokenExpiry,
 		);
 	}
 
@@ -85,21 +89,22 @@ export class AuthService {
 		const { hashedPassword: _, ...userWithoutPassword } = user;
 
 		// Generate tokens after successful authentication
-		const accessToken = await this.#tokenService.generateAccessToken(
-			userWithoutPassword,
-		);
-		const refreshToken = await this.#tokenService.generateRefreshToken(
-			userWithoutPassword,
-		);
+		const accessToken =
+			await this.#tokenService.generateAccessToken(userWithoutPassword);
+		const refreshToken =
+			await this.#tokenService.generateRefreshToken(userWithoutPassword);
 
 		return Ok({ user: userWithoutPassword, accessToken, refreshToken });
 	}
 
 	async refreshAccessToken(
 		refreshToken: string,
-	): Promise<Result<{ accessToken: string; refreshToken: string }, "invalid_token">> {
+	): Promise<
+		Result<{ accessToken: string; refreshToken: string }, "invalid_token">
+	> {
 		// Verify the refresh token
-		const verifyResult = await this.#tokenService.verifyRefreshToken(refreshToken);
+		const verifyResult =
+			await this.#tokenService.verifyRefreshToken(refreshToken);
 
 		if (!verifyResult.ok) {
 			return Err("invalid_token");
