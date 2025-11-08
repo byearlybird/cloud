@@ -1,12 +1,7 @@
 import { sign } from "hono/jwt";
 import { Err, Ok, type Result } from "ts-results";
 import { prefixStorage, type Storage } from "unstorage";
-import {
-	newUserSchema,
-	signInSchema,
-	userSchema,
-	type User,
-} from "../schemas";
+import { newUserSchema, type User } from "../schemas";
 
 export class AuthService {
 	#storage: Storage<User>;

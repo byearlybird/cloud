@@ -54,7 +54,7 @@ export const encodedValueSchema = z.object({
 export const encodedRecordSchema: z.ZodType<{
 	[key: string]: z.infer<typeof encodedValueSchema> | any;
 }> = z.lazy(() =>
-	z.record(z.union([encodedValueSchema, encodedRecordSchema])),
+	z.record(z.string(), z.union([encodedValueSchema, encodedRecordSchema])),
 );
 
 /**
