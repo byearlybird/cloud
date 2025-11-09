@@ -27,7 +27,7 @@ describe("AuthService", () => {
 			const email = "test@example.com";
 			const password = "password123";
 
-			const result = await authService.register(
+			const result = await authService.signUp(
 				email,
 				password,
 				encryptedMasterKey,
@@ -46,7 +46,7 @@ describe("AuthService", () => {
 			const email = "test@example.com";
 			const password = "password123";
 
-			await authService.register(email, password, encryptedMasterKey);
+			await authService.signUp(email, password, encryptedMasterKey);
 
 			// Verify user is stored with hashed password
 			const storedUser = await storage.getItem(`auth:${email}`);
@@ -64,8 +64,8 @@ describe("AuthService", () => {
 			const email = "duplicate@example.com";
 			const password = "password123";
 
-			await authService.register(email, password, encryptedMasterKey);
-			const result = await authService.register(
+			await authService.signUp(email, password, encryptedMasterKey);
+			const result = await authService.signUp(
 				email,
 				password,
 				encryptedMasterKey,
@@ -78,7 +78,7 @@ describe("AuthService", () => {
 		});
 
 		test("returns error for invalid email", async () => {
-			const result = await authService.register(
+			const result = await authService.signUp(
 				"invalid-email",
 				"password123",
 				encryptedMasterKey,
@@ -91,7 +91,7 @@ describe("AuthService", () => {
 		});
 
 		test("returns error for password shorter than 8 characters", async () => {
-			const result = await authService.register(
+			const result = await authService.signUp(
 				"test@example.com",
 				"short",
 				encryptedMasterKey,
@@ -110,7 +110,7 @@ describe("AuthService", () => {
 
 		beforeEach(async () => {
 			// Register a user before each signIn test
-			await authService.register(email, password, encryptedMasterKey);
+			await authService.signUp(email, password, encryptedMasterKey);
 		});
 
 		test("successfully authenticates with valid credentials", async () => {
@@ -171,7 +171,7 @@ describe("AuthService", () => {
 		let validRefreshToken: string;
 
 		beforeEach(async () => {
-			await authService.register(email, password, encryptedMasterKey);
+			await authService.signUp(email, password, encryptedMasterKey);
 			const signInResult = await authService.signIn(email, password);
 			if (signInResult.ok) {
 				validRefreshToken = signInResult.val.refreshToken;
@@ -237,13 +237,13 @@ describe("AuthService", () => {
 		});
 	});
 
-	describe("logout", () => {
-		const email = "logout@example.com";
+	describe("signout", () => {
+		const email = "signout@example.com";
 		const password = "password123";
 		let refreshToken: string;
 
 		beforeEach(async () => {
-			await authService.register(email, password, encryptedMasterKey);
+			await authService.signUp(email, password, encryptedMasterKey);
 			const signInResult = await authService.signIn(email, password);
 			if (signInResult.ok) {
 				refreshToken = signInResult.val.refreshToken;
@@ -251,7 +251,7 @@ describe("AuthService", () => {
 		});
 
 		test("successfully revokes refresh token", async () => {
-			await authService.logout(refreshToken);
+			await authService.signout(refreshToken);
 
 			// Try to use the refresh token - should fail
 			const result = await authService.refreshAccessToken(refreshToken);
@@ -264,7 +264,7 @@ describe("AuthService", () => {
 
 		test("does not throw error for invalid token", async () => {
 			// Should not throw - just fail silently
-			expect(authService.logout("invalid-token")).resolves.toBeUndefined();
+			expect(authService.signout("invalid-token")).resolves.toBeUndefined();
 		});
 	});
 });

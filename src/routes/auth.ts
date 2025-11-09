@@ -8,7 +8,11 @@ import {
 } from "../services/auth";
 
 // Create a register request schema - only email and password from newUserSchema
-const registerSchema = newUserSchema.pick({ email: true, password: true });
+const signupSchema = newUserSchema.pick({
+	email: true,
+	password: true,
+	encryptedMasterKey: true,
+});
 
 export function createAuthRoutes(authService: AuthService) {
 	const auth = new Hono();
@@ -33,9 +37,13 @@ export function createAuthRoutes(authService: AuthService) {
 		}
 	});
 
-	auth.post("/signup", zValidator("json", registerSchema), async (c) => {
-		const { email, password } = c.req.valid("json");
-		const result = await authService.register(email, password);
+	auth.post("/signup", zValidator("json", signupSchema), async (c) => {
+		const { email, password, encryptedMasterKey } = c.req.valid("json");
+		const result = await authService.signUp(
+			email,
+			password,
+			encryptedMasterKey,
+		);
 
 		if (result.ok) {
 			return c.json(result.val, 201);
@@ -63,9 +71,9 @@ export function createAuthRoutes(authService: AuthService) {
 		return c.json({ error: "Invalid or expired refresh token" }, 401);
 	});
 
-	auth.post("/logout", zValidator("json", refreshTokenSchema), async (c) => {
+	auth.post("/signout", zValidator("json", refreshTokenSchema), async (c) => {
 		const { refreshToken } = c.req.valid("json");
-		await authService.logout(refreshToken);
+		await authService.signout(refreshToken);
 		return c.json({ success: true }, 200);
 	});
 

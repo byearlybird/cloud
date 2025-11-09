@@ -24,7 +24,7 @@ export class AuthService {
 		);
 	}
 
-	async register(
+	async signUp(
 		email: string,
 		password: string,
 		encryptedMasterKey: string,
@@ -131,7 +131,7 @@ export class AuthService {
 		return Ok({ accessToken, refreshToken: newRefreshToken });
 	}
 
-	async logout(refreshToken: string): Promise<void> {
+	async signout(refreshToken: string): Promise<void> {
 		await this.#tokenService.revokeRefreshToken(refreshToken);
 	}
 }
