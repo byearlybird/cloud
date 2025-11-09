@@ -1,0 +1,24 @@
+meta {
+  name: get-collection
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://localhost:3000/api/collection/:key
+  body: none
+  auth: bearer
+}
+
+params:path {
+  key: demo
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZTBiYzEzYy01NDE1LTQ4ZjEtYmU3My0xN2MxMzg3YWU5OWIiLCJlbWFpbCI6ImV4YW1wbGVAZGVtby5jb20iLCJleHAiOjE3NjI2NjE5NTF9.RQ9MXonAn9f3gU_hNqPuWeqh5_DeL9-SobtgKnzTBkI
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

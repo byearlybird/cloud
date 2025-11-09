@@ -1,0 +1,23 @@
+meta {
+  name: signin
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:3000/api/auth/signin
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "example@demo.com",
+    "password": "somePassword"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
