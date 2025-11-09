@@ -1,12 +1,35 @@
 {
-	"name": "bun-react-template",
+	"name": "starling-server",
 	"version": "0.1.0",
-	"private": true,
+	"description": "A secure, production-ready server for Starling password manager with JWT authentication and encrypted storage",
 	"type": "module",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/byearlybird/starling-server.git"
+	},
+	"author": "byearlybird",
+	"keywords": [
+		"starling",
+		"password-manager",
+		"bun",
+		"typescript",
+		"authentication",
+		"jwt",
+		"hono",
+		"encrypted-storage"
+	],
+	"homepage": "https://github.com/byearlybird/starling-server#readme",
+	"bugs": {
+		"url": "https://github.com/byearlybird/starling-server/issues"
+	},
 	"scripts": {
 		"dev": "bun --hot src/index.tsx",
 		"start": "NODE_ENV=production bun src/index.tsx",
-		"build": "bun run build.ts"
+		"build": "bun run build.ts",
+		"test": "bun test",
+		"lint": "bunx @biomejs/biome check .",
+		"format": "bunx @biomejs/biome format --write ."
 	},
 	"dependencies": {
 		"@byearlybird/starling": "^0.9.3",
