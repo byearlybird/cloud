@@ -1,5 +1,5 @@
 {
-	"name": "bun-react-template",
+	"name": "cloud",
 	"description": "Zero-knowledge sync server with auth and end-to-end encryption",
 	"version": "0.1.0",
 	"private": true,

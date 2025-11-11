@@ -1,4 +1,4 @@
-# bun-react-tailwind-template
+# cloud
 
 To install dependencies:
 
