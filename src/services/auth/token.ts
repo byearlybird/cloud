@@ -1,22 +1,22 @@
 import { decode, sign, verify } from "hono/jwt";
 import { Err, Ok, type Result } from "ts-results";
-import { prefixStorage, type Storage } from "unstorage";
+import type { KVStore } from "../../kv/kv";
 
 export class TokenService {
-	#storage: Storage<string>;
+	#kv: KVStore;
 	#accessTokenSecret: string;
 	#refreshTokenSecret: string;
 	#accessTokenExpiry: number;
 	#refreshTokenExpiry: number;
 
 	constructor(
-		storage: Storage,
+		kv: KVStore,
 		accessTokenSecret: string,
 		refreshTokenSecret: string,
 		accessTokenExpiry: number,
 		refreshTokenExpiry: number,
 	) {
-		this.#storage = prefixStorage<string>(storage, "token");
+		this.#kv = kv;
 		this.#accessTokenSecret = accessTokenSecret;
 		this.#refreshTokenSecret = refreshTokenSecret;
 		this.#accessTokenExpiry = accessTokenExpiry;
@@ -59,7 +59,7 @@ export class TokenService {
 
 			// Check if token is revoked using userId:hash key
 			const revocationKey = this.#makeKey(userId, token);
-			const revokation = await this.#storage.get(revocationKey);
+			const revokation = this.#kv.get<string>(revocationKey);
 
 			if (revokation) {
 				return Err("invalid_token");
@@ -81,14 +81,14 @@ export class TokenService {
 
 			const revocationKey = this.#makeKey(userId, token);
 			const revokedAt = new Date().toISOString();
-			await this.#storage.set(revocationKey, revokedAt);
+			this.#kv.set(revocationKey, revokedAt);
 		} catch {
 			// Silently fail if token is malformed
 		}
 	}
 
-	#makeKey(userId: string, token: string): string {
+	#makeKey(userId: string, token: string): string[] {
 		const tokenHash = Bun.hash(token).toString();
-		return `${userId}:${tokenHash}`;
+		return ["token", userId, tokenHash];
 	}
 }

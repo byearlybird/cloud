@@ -1,23 +1,20 @@
-import { createStorage } from "unstorage";
-import fsDriver from "unstorage/drivers/fs";
 import type { env } from "../env";
+import { createKV } from "../kv/kv";
 import { AuthService } from "./auth";
 import { CollectionService } from "./collection";
 
 export const createServices = (config: typeof env) => {
-	const storage = createStorage({
-		driver: fsDriver({ base: "./data" }),
-	});
+	const kv = createKV(config.DATABASE_PATH);
 
 	return {
 		auth: new AuthService(
-			storage,
+			kv,
 			config.ACCESS_TOKEN_SECRET,
 			config.REFRESH_TOKEN_SECRET,
 			config.ACCESS_TOKEN_EXPIRY,
 			config.REFRESH_TOKEN_EXPIRY,
 		),
-		collection: new CollectionService(storage),
+		collection: new CollectionService(kv),
 	};
 };
 

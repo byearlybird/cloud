@@ -1,22 +1,22 @@
 import { Err, Ok, type Result } from "ts-results";
-import { prefixStorage, type Storage } from "unstorage";
+import type { KVStore } from "../../kv/kv";
 import { newUserSchema, type User } from "./schemas";
 import { TokenService } from "./token";
 
 export class AuthService {
-	#storage: Storage<User>;
+	#kv: KVStore;
 	#tokenService: TokenService;
 
 	constructor(
-		storage: Storage,
+		kv: KVStore,
 		accessTokenSecret: string,
 		refreshTokenSecret: string,
 		accessTokenExpiry: number,
 		refreshTokenExpiry: number,
 	) {
-		this.#storage = prefixStorage<User>(storage, "auth");
+		this.#kv = kv;
 		this.#tokenService = new TokenService(
-			storage,
+			kv,
 			accessTokenSecret,
 			refreshTokenSecret,
 			accessTokenExpiry,
@@ -41,7 +41,7 @@ export class AuthService {
 			return Err("invalid_data");
 		}
 
-		if (await this.#storage.has(newUser.email)) {
+		if (this.#kv.get<User>(["auth", newUser.email]) !== null) {
 			return Err("already_exists");
 		}
 
@@ -55,7 +55,7 @@ export class AuthService {
 			encryptedMasterKey: newUser.encryptedMasterKey,
 		};
 
-		await this.#storage.set(user.email, user);
+		this.#kv.set(["auth", user.email], user);
 
 		const { hashedPassword: _, ...userWithoutPassword } = user;
 		return Ok(userWithoutPassword);
@@ -74,7 +74,7 @@ export class AuthService {
 			"invalid_credentials" | "user_not_found"
 		>
 	> {
-		const user = await this.#storage.get(email);
+		const user = this.#kv.get<User>(["auth", email]);
 
 		if (!user) {
 			return Err("user_not_found");

@@ -12,6 +12,8 @@ const envSchema = z.object({
 		.number()
 		.positive()
 		.default(7 * 24 * 60 * 60), // 7 days
+	// Database
+	DATABASE_PATH: z.string(),
 });
 
 export const env = envSchema.parse(Bun.env);

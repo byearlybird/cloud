@@ -21,6 +21,7 @@ declare module "bun" {
 	interface Env {
 		ACCESS_TOKEN_SECRET: string;
 		REFRESH_TOKEN_SECRET: string;
+		DATABASE_PATH: string;
 		ACCESS_TOKEN_EXPIRY?: string;
 		REFRESH_TOKEN_EXPIRY?: string;
 	}

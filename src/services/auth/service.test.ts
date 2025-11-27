@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { createStorage, type Storage } from "unstorage";
+import { createKV } from "../../kv/kv";
 import { AuthService } from "./service";
 
 describe("AuthService", () => {
-	let storage: Storage;
+	let kv: ReturnType<typeof createKV>;
 	let authService: AuthService;
 	const accessTokenSecret = "test-access-secret";
 	const refreshTokenSecret = "test-refresh-secret";
@@ -12,9 +12,9 @@ describe("AuthService", () => {
 	const encryptedMasterKey = "test-encrypted-master-key";
 
 	beforeEach(() => {
-		storage = createStorage();
+		kv = createKV();
 		authService = new AuthService(
-			storage,
+			kv,
 			accessTokenSecret,
 			refreshTokenSecret,
 			accessTokenExpiry,
@@ -49,7 +49,7 @@ describe("AuthService", () => {
 			await authService.signUp(email, password, encryptedMasterKey);
 
 			// Verify user is stored with hashed password
-			const storedUser = await storage.getItem(`auth:${email}`);
+			const storedUser = kv.get(["auth", email]);
 			expect(storedUser).toBeDefined();
 			if (storedUser && typeof storedUser === "object") {
 				const user = storedUser as { hashedPassword: string };

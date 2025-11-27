@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { Collection } from "@byearlybird/starling";
-import { createStorage, type Storage } from "unstorage";
+import { createKV } from "../../kv/kv";
 import { CollectionService } from "./service";
 
 describe("CollectionService", () => {
-	let storage: Storage;
+	let kv: ReturnType<typeof createKV>;
 	let collectionService: CollectionService;
 
 	beforeEach(() => {
-		storage = createStorage();
-		collectionService = new CollectionService(storage);
+		kv = createKV();
+		collectionService = new CollectionService(kv);
 	});
 
 	// Helper function to create a test collection
@@ -258,10 +258,8 @@ describe("CollectionService", () => {
 				testCollection,
 			);
 
-			// Verify the key format is userId:collectionName with collection prefix
-			const storedValue = await storage.getItem(
-				`collection:${userId}:${collectionName}`,
-			);
+			// Verify the key format is ["collection", userId, collectionName]
+			const storedValue = kv.get(["collection", userId, collectionName]);
 			expect(storedValue).toBeDefined();
 			expect(storedValue).toEqual(testCollection);
 		});
