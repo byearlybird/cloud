@@ -1,6 +1,6 @@
 {
 	"name": "@byearlybird/cloud",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Zero-knowledge sync server with auth and end-to-end encryption",
 	"type": "module",
 	"types": "./dist/app-type.d.ts",
