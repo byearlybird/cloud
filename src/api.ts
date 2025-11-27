@@ -8,7 +8,6 @@ import { createServices } from "./services";
 const services = createServices(env);
 
 const app = new Hono()
-	.basePath("/api")
 	.route("/auth", createAuthRoutes(services.auth))
 	.route(
 		"/collection",
