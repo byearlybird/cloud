@@ -1,16 +1,30 @@
 {
-	"name": "cloud",
+	"name": "@byearlybird/cloud",
+	"version": "0.1.1",
 	"description": "Zero-knowledge sync server with auth and end-to-end encryption",
-	"version": "0.1.0",
-	"private": true,
 	"type": "module",
+	"types": "./dist/app-type.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/app-type.d.ts"
+		}
+	},
+	"files": [
+		"dist"
+	],
 	"scripts": {
+		"build:types": "tsc -p tsconfig.build.json",
+		"prepublishOnly": "bun run build:types",
 		"dev": "bun --hot src/index.ts",
 		"start": "NODE_ENV=production bun src/index.ts",
-		"test": "bun test"
+		"test": "bun test",
+		"version:patch": "bun pm version patch",
+		"version:minor": "bun pm version minor",
+		"version:major": "bun pm version major",
+		"publish": "bun publish --access public"
 	},
 	"dependencies": {
-		"@byearlybird/starling": "^0.9.3",
+		"@byearlybird/starling": "^0.11.0",
 		"@hono/zod-validator": "^0.7.4",
 		"hono": "^4.10.4",
 		"ts-results": "^3.3.0",
@@ -19,6 +33,10 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.4",
-		"@types/bun": "latest"
+		"@types/bun": "latest",
+		"typescript": "^5.6.0"
+	},
+	"peerDependencies": {
+		"hono": "^4.10.4"
 	}
 }

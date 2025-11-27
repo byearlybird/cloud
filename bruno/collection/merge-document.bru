@@ -1,0 +1,87 @@
+meta {
+  name: merge-document
+  type: http
+  seq: 2
+}
+
+patch {
+  url: http://localhost:3000/api/document/:key
+  body: json
+  auth: bearer
+}
+
+params:path {
+  key: demo
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZTBiYzEzYy01NDE1LTQ4ZjEtYmU3My0xN2MxMzg3YWU5OWIiLCJlbWFpbCI6ImV4YW1wbGVAZGVtby5jb20iLCJleHAiOjE3NjI2NjE5NTF9.RQ9MXonAn9f3gU_hNqPuWeqh5_DeL9-SobtgKnzTBkI
+}
+
+body:json {
+  {
+    "jsonapi": {
+      "version": "1.1"
+    },
+    "meta": {
+      "latest": "2025-11-08T11:00:00Z"
+    },
+    "data": [
+      {
+        "type": "default",
+        "id": "doc-1",
+        "attributes": {
+          "value": "Hello World"
+        },
+        "meta": {
+          "eventstamps": {
+            "value": "2025-11-08T10:00:00Z"
+          },
+          "latest": "2025-11-08T10:00:00Z",
+          "deletedAt": null
+        }
+      },
+      {
+        "type": "default",
+        "id": "doc-2",
+        "attributes": {
+          "name": "John Doe",
+          "age": 31,
+          "address": {
+            "street": "123 Main St",
+            "city": "Springfield"
+          }
+        },
+        "meta": {
+          "eventstamps": {
+            "name": "2025-11-08T10:01:00Z",
+            "age": "2025-11-09T10:01:00Z",
+            "address.street": "2025-11-08T10:01:00Z",
+            "address.city": "2025-11-08T10:01:00Z"
+          },
+          "latest": "2025-11-09T10:01:00Z",
+          "deletedAt": null
+        }
+      },
+      {
+        "type": "default",
+        "id": "doc-3",
+        "attributes": {
+          "title": "Deleted Document"
+        },
+        "meta": {
+          "eventstamps": {
+            "title": "2025-11-08T09:50:00Z"
+          },
+          "latest": "2025-11-08T11:00:00Z",
+          "deletedAt": "2025-11-08T11:00:00Z"
+        }
+      }
+    ]
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

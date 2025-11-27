@@ -64,7 +64,7 @@ import { Hono } from "hono";
 const app = new Hono()
   .basePath("/api")
   .route("/auth", authRoutes)
-  .route("/collection", collectionRoutes);
+  .route("/document", documentRoutes);
 
 export default app;
 ```

@@ -1,7 +1,7 @@
 import type { env } from "../env";
 import { createKV } from "../kv/kv";
 import { AuthService } from "./auth";
-import { CollectionService } from "./collection";
+import { DocumentService } from "./document";
 
 export const createServices = (config: typeof env) => {
 	const kv = createKV(config.DATABASE_PATH);
@@ -14,7 +14,7 @@ export const createServices = (config: typeof env) => {
 			config.ACCESS_TOKEN_EXPIRY,
 			config.REFRESH_TOKEN_EXPIRY,
 		),
-		collection: new CollectionService(kv),
+		document: new DocumentService(kv),
 	};
 };
 
