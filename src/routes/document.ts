@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import type { JwtVariables } from "hono/jwt";
 import { jwt } from "hono/jwt";
 import type { DocumentService } from "../services/document";
-import { documentSchema } from "../services/document";
+import { jsonApiDocumentSchema } from "../services/document";
 
 export function createDocumentRoutes(
 	documentService: DocumentService,
@@ -26,7 +26,7 @@ export function createDocumentRoutes(
 
 			return c.json(documentData, 200);
 		})
-		.patch("/:key", zValidator("json", documentSchema), async (c) => {
+		.patch("/:key", zValidator("json", jsonApiDocumentSchema), async (c) => {
 			const payload = c.get("jwtPayload");
 			const userId = payload.sub as string;
 			const key = c.req.param("key");

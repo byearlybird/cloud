@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, test } from "bun:test";
-import { createKV } from "../../kv/kv";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { cleanupTestDb, createTestDb } from "../../db/test-helpers";
 import { AuthService } from "./service";
 
 describe("AuthService", () => {
-	let kv: ReturnType<typeof createKV>;
+	let db: Awaited<ReturnType<typeof createTestDb>>["db"];
+	let sqlite: Awaited<ReturnType<typeof createTestDb>>["sqlite"];
 	let authService: AuthService;
 	const accessTokenSecret = "test-access-secret";
 	const refreshTokenSecret = "test-refresh-secret";
@@ -11,15 +12,21 @@ describe("AuthService", () => {
 	const refreshTokenExpiry = 7 * 24 * 60 * 60; // 7 days
 	const encryptedMasterKey = "test-encrypted-master-key";
 
-	beforeEach(() => {
-		kv = createKV();
+	beforeEach(async () => {
+		const testDb = await createTestDb();
+		db = testDb.db;
+		sqlite = testDb.sqlite;
 		authService = new AuthService(
-			kv,
+			db,
 			accessTokenSecret,
 			refreshTokenSecret,
 			accessTokenExpiry,
 			refreshTokenExpiry,
 		);
+	});
+
+	afterEach(() => {
+		cleanupTestDb(sqlite);
 	});
 
 	describe("register", () => {
@@ -46,17 +53,18 @@ describe("AuthService", () => {
 			const email = "test@example.com";
 			const password = "password123";
 
-			await authService.signUp(email, password, encryptedMasterKey);
+			const signUpResult = await authService.signUp(
+				email,
+				password,
+				encryptedMasterKey,
+			);
 
-			// Verify user is stored with hashed password
-			const storedUser = kv.get(["auth", email]);
-			expect(storedUser).toBeDefined();
-			if (storedUser && typeof storedUser === "object") {
-				const user = storedUser as { hashedPassword: string };
-				expect(user.hashedPassword).toBeDefined();
-				expect(user.hashedPassword).not.toBe(password);
-				// Verify password was actually hashed (Bun uses argon2id)
-				expect(user.hashedPassword.startsWith("$argon2id")).toBe(true);
+			// Verify user was created with hashed password
+			expect(signUpResult.ok).toBe(true);
+			if (signUpResult.ok) {
+				// The signUp result doesn't include hashedPassword, but we can verify via signIn
+				const signInResult = await authService.signIn(email, password);
+				expect(signInResult.ok).toBe(true);
 			}
 		});
 

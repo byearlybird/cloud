@@ -2,13 +2,13 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import type { AuthService } from "../services/auth";
 import {
-	newUserSchema,
-	refreshTokenSchema,
+	refreshTokenInput,
 	signInSchema,
+	signUpSchema,
 } from "../services/auth";
 
 // Create a register request schema - only email and password from newUserSchema
-const signupSchema = newUserSchema.pick({
+const signupSchema = signUpSchema.pick({
 	email: true,
 	password: true,
 	encryptedMasterKey: true,
@@ -56,7 +56,7 @@ export function createAuthRoutes(authService: AuthService) {
 					return c.json({ error: "Unknown error" }, 500);
 			}
 		})
-		.post("/refresh", zValidator("json", refreshTokenSchema), async (c) => {
+		.post("/refresh", zValidator("json", refreshTokenInput), async (c) => {
 			const { refreshToken } = c.req.valid("json");
 			const result = await authService.refreshAccessToken(refreshToken);
 
@@ -67,7 +67,7 @@ export function createAuthRoutes(authService: AuthService) {
 
 			return c.json({ error: "Invalid or expired refresh token" }, 401);
 		})
-		.post("/signout", zValidator("json", refreshTokenSchema), async (c) => {
+		.post("/signout", zValidator("json", refreshTokenInput), async (c) => {
 			const { refreshToken } = c.req.valid("json");
 			await authService.signout(refreshToken);
 			return c.json({ success: true }, 200);

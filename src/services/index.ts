@@ -1,20 +1,18 @@
 import type { env } from "../env";
-import { createKV } from "../kv/kv";
+import { db } from "../db";
 import { AuthService } from "./auth";
 import { DocumentService } from "./document";
 
 export const createServices = (config: typeof env) => {
-	const kv = createKV(config.DATABASE_PATH);
-
 	return {
 		auth: new AuthService(
-			kv,
+			db,
 			config.ACCESS_TOKEN_SECRET,
 			config.REFRESH_TOKEN_SECRET,
 			config.ACCESS_TOKEN_EXPIRY,
 			config.REFRESH_TOKEN_EXPIRY,
 		),
-		document: new DocumentService(kv),
+		document: new DocumentService(db),
 	};
 };
 
