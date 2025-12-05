@@ -14,6 +14,10 @@ const envSchema = z.object({
 		.default(7 * 24 * 60 * 60), // 7 days
 	// Database
 	DATABASE_PATH: z.string(),
+	// CORS
+	ALLOWED_ORIGINS: z
+		.string()
+		.default("http://localhost:3000,http://localhost:5173"),
 });
 
 export const env = envSchema.parse(Bun.env);

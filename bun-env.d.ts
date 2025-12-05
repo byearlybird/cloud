@@ -24,5 +24,6 @@ declare module "bun" {
 		DATABASE_PATH: string;
 		ACCESS_TOKEN_EXPIRY?: string;
 		REFRESH_TOKEN_EXPIRY?: string;
+		ALLOWED_ORIGINS?: string;
 	}
 }
