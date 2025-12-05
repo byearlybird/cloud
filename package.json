@@ -18,6 +18,10 @@
 		"dev": "bun --hot src/index.ts",
 		"start": "NODE_ENV=production bun src/index.ts",
 		"test": "bun test",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:push": "drizzle-kit push",
+		"db:studio": "drizzle-kit studio",
 		"version:patch": "bun pm version patch",
 		"version:minor": "bun pm version minor",
 		"version:major": "bun pm version major",
@@ -26,6 +30,8 @@
 	"dependencies": {
 		"@byearlybird/starling": "^0.11.0",
 		"@hono/zod-validator": "^0.7.4",
+		"drizzle-orm": "^1.0.0-beta.2-b782ae1",
+		"drizzle-zod": "^0.8.3",
 		"hono": "^4.10.4",
 		"ts-results": "^3.3.0",
 		"tslib": "^2.8.1",
@@ -33,7 +39,9 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.4",
+		"@libsql/client": "^0.15.15",
 		"@types/bun": "latest",
+		"drizzle-kit": "^1.0.0-beta.2-b782ae1",
 		"typescript": "^5.6.0"
 	},
 	"peerDependencies": {
