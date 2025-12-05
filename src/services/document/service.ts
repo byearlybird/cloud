@@ -1,37 +1,73 @@
 import type { AnyObject, JsonDocument } from "@byearlybird/starling/core";
 import { mergeDocuments } from "@byearlybird/starling/core";
-import type { KVStore } from "../../kv/kv";
+import { and, eq } from "drizzle-orm";
+import type { db } from "../../db";
+import { documents } from "../../db/schema";
 
 export class DocumentService {
-	#kv: KVStore;
+	#db: typeof db;
 
-	constructor(kv: KVStore) {
-		this.#kv = kv;
+	constructor(database: typeof db) {
+		this.#db = database;
 	}
 
-	async getDocument(userId: string, document: string) {
-		const key = this.#makeKey(userId, document);
-		return this.#kv.get<JsonDocument<AnyObject>>(key);
+	async getDocument(userId: string, documentKey: string) {
+		const doc = await this.#db
+			.select()
+			.from(documents)
+			.where(
+				and(
+					eq(documents.userId, userId),
+					eq(documents.documentKey, documentKey),
+				),
+			)
+			.limit(1)
+			.then((r) => r.at(0));
+
+		if (!doc) {
+			return null;
+		}
+
+		// Parse JSON document data
+		try {
+			return doc.documentData;
+		} catch (error) {
+			throw new Error(`Failed to parse document data: ${error}`);
+		}
 	}
 
 	async mergeDocument(
 		userId: string,
-		document: string,
+		documentKey: string,
 		data: JsonDocument<AnyObject>,
 	) {
-		const key = this.#makeKey(userId, document);
-		const current = this.#kv.get<JsonDocument<AnyObject>>(key);
+		const current = await this.getDocument(userId, documentKey);
 
+		let finalDocument: JsonDocument<AnyObject>;
 		if (!current) {
-			this.#kv.set<JsonDocument<AnyObject>>(key, data);
-			return;
+			finalDocument = data;
+		} else {
+			const result = mergeDocuments(current, data);
+			finalDocument = result.document;
 		}
 
-		const result = mergeDocuments(current, data);
-		this.#kv.set<JsonDocument<AnyObject>>(key, result.document);
-	}
+		const id = crypto.randomUUID();
 
-	#makeKey(userId: string, document: string): string[] {
-		return ["document", userId, document];
+		// Upsert document with atomic conflict resolution
+		await this.#db
+			.insert(documents)
+			.values({
+				id,
+				userId,
+				documentKey,
+				documentData: finalDocument,
+			})
+			.onConflictDoUpdate({
+				target: [documents.userId, documents.documentKey],
+				set: {
+					documentData: finalDocument,
+					updatedAt: new Date().toISOString(),
+				},
+			});
 	}
 }

@@ -1,49 +1,36 @@
 import { z } from "zod";
+import { newUserSchema } from "../../db/schema";
 
 /**
  * Authentication Schemas
+ *
+ * These schemas are built on top of the database schemas from src/db/schema.ts
+ * and adapted for API input validation.
  */
-
-const userBaseSchema = z.object({
-	id: z.uuid(),
-	email: z.email(),
-	encryptedMasterKey: z.string(),
-	createdAt: z.iso.datetime(),
-});
 
 /**
- * Internal user schema with hashed password and encrypted master key
+ * API input schema for sign-up
+ * Based on DB newUserSchema but uses 'password' instead of 'hashedPassword'
  */
-export const userSchema = userBaseSchema.extend({
-	hashedPassword: z.string(),
-});
-
-/**
- * Schema for creating new users
- */
-export const newUserSchema = userBaseSchema
-	.omit({ id: true, createdAt: true })
+export const signUpSchema = newUserSchema
+	.omit({ hashedPassword: true, createdAt: true, updatedAt: true })
 	.extend({
-		id: z.uuid().default(() => crypto.randomUUID()),
+		email: z.email(),
 		password: z.string().min(8),
-		createdAt: z
-			.iso.datetime()
-			.default(() => new Date().toISOString()),
 	});
 
 /**
- * Schema for user sign-in
+ * API input schema for sign-in
  */
-export const signInSchema = newUserSchema.pick({
-	email: true,
-	password: true,
+export const signInSchema = z.object({
+	email: z.email(),
+	password: z.string().min(8),
 });
 
 /**
- * Schema for refresh token request
+ * API request schema for refresh token endpoints
+ * (Not related to DB refreshTokenSchema which is the DB entity)
  */
-export const refreshTokenSchema = z.object({
+export const refreshTokenInput = z.object({
 	refreshToken: z.string(),
 });
-
-export type User = z.infer<typeof userSchema>;

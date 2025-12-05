@@ -8,7 +8,7 @@ import { z } from "zod";
 /**
  * Zod schema for ResourceObject metadata
  */
-export const resourceMetaSchema = z.object({
+export const jsonApiResourceMetaSchema = z.object({
 	/** Flat map of dot-separated paths to eventstamps */
 	eventstamps: z.record(z.string(), z.string()),
 	/** The greatest eventstamp in this resource */
@@ -21,7 +21,7 @@ export const resourceMetaSchema = z.object({
  * Zod schema for ResourceObject<T>
  * Represents a single stored entity in JSON:API format
  */
-export const resourceObjectSchema = z.object({
+export const jsonApiResourceSchema = z.object({
 	/** Resource type identifier */
 	type: z.string(),
 	/** Unique identifier for this resource */
@@ -29,14 +29,14 @@ export const resourceObjectSchema = z.object({
 	/** The resource's data as a nested object structure */
 	attributes: z.record(z.string(), z.unknown()),
 	/** Metadata for tracking deletion and eventstamps */
-	meta: resourceMetaSchema,
+	meta: jsonApiResourceMetaSchema,
 });
 
 /**
  * Zod schema for JsonDocument<T>
  * A JSON:API document representing the complete state of a document
  */
-export const documentSchema = z.object({
+export const jsonApiDocumentSchema = z.object({
 	/** API version information */
 	jsonapi: z.object({
 		version: z.literal("1.1"),
@@ -47,12 +47,12 @@ export const documentSchema = z.object({
 		latest: z.string(),
 	}),
 	/** Array of resource objects with eventstamps and metadata */
-	data: z.array(resourceObjectSchema),
+	data: z.array(jsonApiResourceSchema),
 });
 
 /**
  * Type inference helpers
  */
-export type ResourceMeta = z.infer<typeof resourceMetaSchema>;
-export type ResourceObject = z.infer<typeof resourceObjectSchema>;
-export type DocumentSchema = z.infer<typeof documentSchema>;
+export type JsonApiResourceMeta = z.infer<typeof jsonApiResourceMetaSchema>;
+export type JsonApiResource = z.infer<typeof jsonApiResourceSchema>;
+export type JsonApiDocument = z.infer<typeof jsonApiDocumentSchema>;

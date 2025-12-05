@@ -1,15 +1,22 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { AnyObject, JsonDocument } from "@byearlybird/starling/core";
-import { createKV } from "../../kv/kv";
+import { cleanupTestDb, createTestDb } from "../../db/test-helpers";
 import { DocumentService } from "./service";
 
 describe("DocumentService", () => {
-	let kv: ReturnType<typeof createKV>;
+	let db: Awaited<ReturnType<typeof createTestDb>>["db"];
+	let sqlite: Awaited<ReturnType<typeof createTestDb>>["sqlite"];
 	let documentService: DocumentService;
 
-	beforeEach(() => {
-		kv = createKV();
-		documentService = new DocumentService(kv);
+	beforeEach(async () => {
+		const testDb = await createTestDb();
+		db = testDb.db;
+		sqlite = testDb.sqlite;
+		documentService = new DocumentService(db);
+	});
+
+	afterEach(() => {
+		cleanupTestDb(sqlite);
 	});
 
 	// Helper function to create a test document
@@ -195,17 +202,6 @@ describe("DocumentService", () => {
 					expect(doc.attributes.name).toBe("New Value");
 				}
 			}
-		});
-
-		test("uses correct storage key format", async () => {
-			const testDocument = createTestDocument("2024-01-01T00:00:00.000Z|0|0");
-
-			await documentService.mergeDocument(userId, documentName, testDocument);
-
-			// Verify the key format is ["document", userId, documentName]
-			const storedValue = kv.get(["document", userId, documentName]);
-			expect(storedValue).toBeDefined();
-			expect(storedValue).toEqual(testDocument);
 		});
 
 		test("handles empty document arrays", async () => {

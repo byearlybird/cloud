@@ -1,22 +1,24 @@
+import { eq } from "drizzle-orm";
 import { Err, Ok, type Result } from "ts-results";
-import type { KVStore } from "../../kv/kv";
-import { newUserSchema, type User } from "./schemas";
+import type { db } from "../../db";
+import { type User, users } from "../../db/schema";
+import { signUpSchema } from "./schemas";
 import { TokenService } from "./token";
 
 export class AuthService {
-	#kv: KVStore;
+	#db: typeof db;
 	#tokenService: TokenService;
 
 	constructor(
-		kv: KVStore,
+		database: typeof db,
 		accessTokenSecret: string,
 		refreshTokenSecret: string,
 		accessTokenExpiry: number,
 		refreshTokenExpiry: number,
 	) {
-		this.#kv = kv;
+		this.#db = database;
 		this.#tokenService = new TokenService(
-			kv,
+			database,
 			accessTokenSecret,
 			refreshTokenSecret,
 			accessTokenExpiry,
@@ -31,7 +33,7 @@ export class AuthService {
 	): Promise<
 		Result<Omit<User, "hashedPassword">, "already_exists" | "invalid_data">
 	> {
-		const { success: newUserSuccess, data: newUser } = newUserSchema.safeParse({
+		const { success: newUserSuccess, data: newUser } = signUpSchema.safeParse({
 			email,
 			password,
 			encryptedMasterKey,
@@ -41,24 +43,48 @@ export class AuthService {
 			return Err("invalid_data");
 		}
 
-		if (this.#kv.get<User>(["auth", newUser.email]) !== null) {
+		// Check if user already exists
+		const existingUser = await this.#db
+			.select()
+			.from(users)
+			.where(eq(users.email, newUser.email))
+			.limit(1)
+			.then((r) => r.at(0));
+
+		if (existingUser) {
 			return Err("already_exists");
 		}
 
 		const hashedPassword = await Bun.password.hash(newUser.password);
 
-		const user = {
-			id: newUser.id,
-			email: newUser.email,
-			createdAt: newUser.createdAt,
-			hashedPassword,
-			encryptedMasterKey: newUser.encryptedMasterKey,
-		};
+		try {
+			const insertedUser = await this.#db
+				.insert(users)
+				.values({
+					id: newUser.id,
+					email: newUser.email,
+					hashedPassword,
+					encryptedMasterKey: newUser.encryptedMasterKey,
+				})
+				.returning()
+				.then((r) => r.at(0));
 
-		this.#kv.set(["auth", user.email], user);
+			if (!insertedUser) {
+				throw new Error("Failed to insert user");
+			}
 
-		const { hashedPassword: _, ...userWithoutPassword } = user;
-		return Ok(userWithoutPassword);
+			const { hashedPassword: _, ...userWithoutPassword } = insertedUser;
+			return Ok(userWithoutPassword);
+		} catch (error) {
+			// Handle unique constraint violation (race condition)
+			if (
+				error instanceof Error &&
+				error.message.includes("UNIQUE constraint")
+			) {
+				return Err("already_exists");
+			}
+			throw error;
+		}
 	}
 
 	async signIn(
@@ -74,7 +100,12 @@ export class AuthService {
 			"invalid_credentials" | "user_not_found"
 		>
 	> {
-		const user = this.#kv.get<User>(["auth", email]);
+		const user = await this.#db
+			.select()
+			.from(users)
+			.where(eq(users.email, email))
+			.limit(1)
+			.then((r) => r.at(0));
 
 		if (!user) {
 			return Err("user_not_found");
@@ -89,6 +120,7 @@ export class AuthService {
 			return Err("invalid_credentials");
 		}
 
+		// Strip hashedPassword to maintain API compatibility
 		const { hashedPassword: _, ...userWithoutPassword } = user;
 
 		// Generate tokens after successful authentication
