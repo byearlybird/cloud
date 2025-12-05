@@ -1,7 +1,10 @@
 import { serve } from "bun";
 import app from "./api";
+import { migrate } from "./migrate";
 
 const port = parseInt(Bun.env.PORT || "3000", 10);
+
+await migrate();
 
 const server = serve({
 	port,
