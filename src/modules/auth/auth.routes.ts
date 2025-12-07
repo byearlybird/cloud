@@ -5,6 +5,7 @@ import {
 	UnauthorizedError,
 	ValidationError,
 } from "@/shared/errors";
+import { createdResponse, okResponse } from "@/shared/responses";
 import { signInSchema, signUpSchema } from "./auth.schema";
 import type { AuthService } from "./auth.service";
 
@@ -34,7 +35,7 @@ export function createAuthRoutes(authService: AuthService) {
 				throw new InternalServerError("Failed to sign up");
 			}
 
-			return c.json(result.value, 201);
+			return createdResponse(c, result.value);
 		})
 		.post("/signin", async (c) => {
 			const body = await c.req.json();
@@ -60,6 +61,6 @@ export function createAuthRoutes(authService: AuthService) {
 				throw new InternalServerError("Failed to sign in");
 			}
 
-			return c.json(result.value, 200);
+			return okResponse(c, result.value);
 		});
 }

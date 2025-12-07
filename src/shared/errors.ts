@@ -10,7 +10,7 @@ export class ApiError extends Error {
 		super(message);
 	}
 
-	toJSONResponse(c: Context) {
+	toResponse(c: Context) {
 		return c.json(
 			{
 				error: this.message,

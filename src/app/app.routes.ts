@@ -30,7 +30,7 @@ export const appRoutes = new Hono()
 	.route("/documents", documentRoutes)
 	.onError((err, c) => {
 		if (err instanceof ApiError) {
-			return err.toJSONResponse(c);
+			return err.toResponse(c);
 		}
 
 		if (err instanceof HTTPException) {
@@ -38,7 +38,7 @@ export const appRoutes = new Hono()
 		}
 
 		console.error(err);
-		return new InternalServerError().toJSONResponse(c);
+		return new InternalServerError().toResponse(c);
 	});
 
 export type AppRoutes = typeof appRoutes;

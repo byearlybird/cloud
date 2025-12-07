@@ -7,6 +7,7 @@ import {
 	UnauthorizedError,
 	ValidationError,
 } from "@/shared/errors";
+import { noContentResponse, okResponse } from "@/shared/responses";
 import { mergeDocSchema } from "./document.schema";
 import type { DocumentService } from "./document.service";
 
@@ -36,7 +37,7 @@ export function createDocumentRoutes(
 				throw new NotFoundError("Document not found");
 			}
 
-			return c.json(doc.value, 200);
+			return okResponse(c, doc.value);
 		})
 		.patch("/:key", async (c) => {
 			const key = c.req.param("key");
@@ -61,6 +62,6 @@ export function createDocumentRoutes(
 				throw new InternalServerError("Failed to merge document");
 			}
 
-			return c.body(null, 204);
+			return noContentResponse(c);
 		});
 }

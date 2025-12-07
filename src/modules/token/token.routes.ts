@@ -7,6 +7,7 @@ import {
 	InvalidTokenError,
 	ValidationError,
 } from "@/shared/errors";
+import { noContentResponse, okResponse } from "@/shared/responses";
 
 export function createTokenRoutes(tokenService: TokenService) {
 	return new Hono()
@@ -25,7 +26,7 @@ export function createTokenRoutes(tokenService: TokenService) {
 				throw new InvalidTokenError();
 			}
 
-			return c.json(result.value, 200);
+			return okResponse(c, result.value);
 		})
 		.post("/revoke", async (c) => {
 			const body = await c.req.json();
@@ -42,6 +43,6 @@ export function createTokenRoutes(tokenService: TokenService) {
 				throw new InternalServerError("Failed to revoke token");
 			}
 
-			return c.body(null, 204);
+			return noContentResponse(c);
 		});
 }
