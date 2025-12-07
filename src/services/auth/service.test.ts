@@ -42,10 +42,14 @@ describe("AuthService", () => {
 
 			expect(result.ok).toBe(true);
 			if (result.ok) {
-				expect(result.val.email).toBe(email);
-				expect(result.val.id).toBeDefined();
-				expect(result.val.createdAt).toBeDefined();
-				expect("hashedPassword" in result.val).toBe(false);
+				expect(result.val.user.email).toBe(email);
+				expect(result.val.user.id).toBeDefined();
+				expect(result.val.user.createdAt).toBeDefined();
+				expect("hashedPassword" in result.val.user).toBe(false);
+				expect(result.val.accessToken).toBeDefined();
+				expect(result.val.refreshToken).toBeDefined();
+				expect(typeof result.val.accessToken).toBe("string");
+				expect(typeof result.val.refreshToken).toBe("string");
 			}
 		});
 
@@ -65,6 +69,11 @@ describe("AuthService", () => {
 				// The signUp result doesn't include hashedPassword, but we can verify via signIn
 				const signInResult = await authService.signIn(email, password);
 				expect(signInResult.ok).toBe(true);
+				// Verify signup returns tokens
+				expect(signUpResult.val.accessToken).toBeDefined();
+				expect(signUpResult.val.refreshToken).toBeDefined();
+				expect(typeof signUpResult.val.accessToken).toBe("string");
+				expect(typeof signUpResult.val.refreshToken).toBe("string");
 			}
 		});
 

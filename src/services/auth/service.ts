@@ -31,7 +31,14 @@ export class AuthService {
 		password: string,
 		encryptedMasterKey: string,
 	): Promise<
-		Result<Omit<User, "hashedPassword">, "already_exists" | "invalid_data">
+		Result<
+			{
+				user: Omit<User, "hashedPassword">;
+				accessToken: string;
+				refreshToken: string;
+			},
+			"already_exists" | "invalid_data"
+		>
 	> {
 		const { success: newUserSuccess, data: newUser } = signUpSchema.safeParse({
 			email,
@@ -74,7 +81,14 @@ export class AuthService {
 			}
 
 			const { hashedPassword: _, ...userWithoutPassword } = insertedUser;
-			return Ok(userWithoutPassword);
+
+			// Generate tokens after successful signup
+			const accessToken =
+				await this.#tokenService.generateAccessToken(userWithoutPassword);
+			const refreshToken =
+				await this.#tokenService.generateRefreshToken(userWithoutPassword);
+
+			return Ok({ user: userWithoutPassword, accessToken, refreshToken });
 		} catch (error) {
 			// Handle unique constraint violation (race condition)
 			if (
