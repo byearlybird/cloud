@@ -1,13 +1,12 @@
 import { Hono } from "hono";
-
-import { refreshTokenDTO } from "./token.schema";
-import type { TokenService } from "./token.service";
 import {
 	InternalServerError,
 	InvalidTokenError,
 	ValidationError,
 } from "@/shared/errors";
 import { noContentResponse, okResponse } from "@/shared/responses";
+import { refreshTokenDTO } from "./token.schema";
+import type { TokenService } from "./token.service";
 
 export function createTokenRoutes(tokenService: TokenService) {
 	return new Hono()
