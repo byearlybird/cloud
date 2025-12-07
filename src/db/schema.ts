@@ -108,10 +108,10 @@ export const newUserSchema = createInsertSchema(users);
 export type User = z.infer<typeof userSchema>;
 export type NewUser = z.infer<typeof newUserSchema>;
 
-export const refreshTokenSchema = createSelectSchema(refreshTokens);
-export const newRefreshTokenSchema = createInsertSchema(refreshTokens);
-export type RefreshToken = z.infer<typeof refreshTokenSchema>;
-export type NewRefreshToken = z.infer<typeof newRefreshTokenSchema>;
+export const refreshTokenRowSchema = createSelectSchema(refreshTokens);
+export const newRefreshTokenRowSchema = createInsertSchema(refreshTokens);
+export type RefreshTokenRow = z.infer<typeof refreshTokenRowSchema>;
+export type NewRefreshTokenRow = z.infer<typeof newRefreshTokenRowSchema>;
 
 export const documentSchema = createSelectSchema(documents);
 export const newDocumentSchema = createInsertSchema(documents);
