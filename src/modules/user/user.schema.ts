@@ -1,10 +1,9 @@
-import type { z } from "zod";
-import { newUserSchema } from "@/db/schema";
+import z from "zod";
 
-export const createUserSchema = newUserSchema.pick({
-	email: true,
-	encryptedMasterKey: true,
-	hashedPassword: true,
+export const createUserSchema = z.object({
+	email: z.email(),
+	encryptedMasterKey: z.string().min(1),
+	hashedPassword: z.string().min(1),
 });
 
 export type CreateUserDTO = z.infer<typeof createUserSchema>;
