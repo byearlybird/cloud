@@ -1,14 +1,17 @@
 import { jwt } from "hono/jwt";
+import { env } from "@/env";
 import { createAuthRoutes } from "@/modules/auth/auth.routes";
 import { createDocumentRoutes } from "@/modules/document/document.routes";
-import { authService, documentService } from "./app.services";
+import { createTokenRoutes } from "@/modules/token/token.routes";
+import { authService, documentService, tokenService } from "./app.services";
 
-const jwtMiddleware = jwt({
-	secret: "",
+const accessTokenMiddleware = jwt({
+	secret: env.ACCESS_TOKEN_SECRET,
 });
 
+export const authRoutes = createAuthRoutes(authService);
 export const documentRoutes = createDocumentRoutes(
 	documentService,
-	jwtMiddleware,
+	accessTokenMiddleware,
 );
-export const authRoutes = createAuthRoutes(authService);
+export const tokenRoutes = createTokenRoutes(tokenService);

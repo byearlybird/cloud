@@ -20,3 +20,22 @@ export const refreshTokenSchema = accessTokenSchema.extend({
 
 export type AccessToken = z.infer<typeof accessTokenSchema>;
 export type RefreshToken = z.infer<typeof refreshTokenSchema>;
+
+/**
+ * Token service configuration
+ */
+export type TokenConfig = {
+	accessTokenSecret: string;
+	refreshTokenSecret: string;
+	accessTokenExpiry: number;
+	refreshTokenExpiry: number;
+};
+
+/**
+ * Refresh token input schema for API requests
+ */
+export const refreshTokenDTO = z.object({
+	refreshToken: z.string(),
+});
+
+export type RefreshTokenDTO = z.infer<typeof refreshTokenDTO>;

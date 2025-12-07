@@ -1,7 +1,12 @@
-import { decode, sign, verify } from "hono/jwt";
+import { sign, verify } from "hono/jwt";
 
 import { Result } from "@/shared/result";
-import { type AccessToken, accessTokenSchema } from "./token.schema";
+import {
+	type AccessToken,
+	accessTokenSchema,
+	type RefreshToken,
+	refreshTokenSchema,
+} from "./token.schema";
 
 export async function generateAccessToken(
 	userId: string,
@@ -36,20 +41,23 @@ export async function generateRefreshToken(
 	);
 }
 
-export async function verifyToken(
+export async function verifyAccessToken(
 	token: string,
 	secret: string,
 ): Promise<Result<AccessToken>> {
 	return Result.wrapAsync(async () => {
-		const payload = await verify(token, secret);
+		const payload = await verify(token, secret, "HS256");
 		return accessTokenSchema.parse(payload);
 	});
 }
 
-export function decodeToken(token: string): Result<AccessToken> {
-	return Result.wrap(() => {
-		const { payload } = decode(token);
-		return accessTokenSchema.parse(payload);
+export async function verifyRefreshToken(
+	token: string,
+	secret: string,
+): Promise<Result<RefreshToken>> {
+	return Result.wrapAsync(async () => {
+		const payload = await verify(token, secret, "HS256");
+		return refreshTokenSchema.parse(payload);
 	});
 }
 

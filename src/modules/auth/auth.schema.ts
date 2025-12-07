@@ -1,14 +1,6 @@
 import { z } from "zod";
 import type { User } from "@/db/schema";
 
-// Configuration
-export type AuthConfig = {
-	accessTokenSecret: string;
-	refreshTokenSecret: string;
-	accessTokenExpiry: number;
-	refreshTokenExpiry: number;
-};
-
 export type AuthResponse = {
 	user: Omit<User, "hashedPassword">;
 	accessToken: string;

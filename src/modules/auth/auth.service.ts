@@ -1,18 +1,8 @@
-import {
-	generateAccessToken,
-	generateRefreshToken,
-	hashToken,
-} from "@/modules/token/token.domain";
-import type { TokenRepo } from "@/modules/token/token.repo";
+import type { TokenService } from "@/modules/token/token.service";
 import type { UserRepo } from "@/modules/user/user.repo";
 import { Result } from "@/shared/result";
 import { hashPassword, sanitizeUser } from "./auth.domain";
-import type {
-	AuthConfig,
-	AuthResponse,
-	SignInDTO,
-	SignUpDTO,
-} from "./auth.schema";
+import type { AuthResponse, SignInDTO, SignUpDTO } from "./auth.schema";
 import { signInSchema, signUpSchema } from "./auth.schema";
 
 export type AuthService = {
@@ -22,8 +12,7 @@ export type AuthService = {
 
 export function createAuthService(
 	userRepo: UserRepo,
-	tokenRepo: TokenRepo,
-	config: AuthConfig,
+	tokenService: TokenService,
 ): AuthService {
 	return {
 		async signUp(dto) {
@@ -53,35 +42,14 @@ export function createAuthService(
 
 				const user = userResult.value;
 
-				// Generate tokens
-				const accessToken = await generateAccessToken(
-					user.id,
-					user.email,
-					config.accessTokenSecret,
-					config.accessTokenExpiry,
-				);
-
-				const refreshToken = await generateRefreshToken(
-					user.id,
-					user.email,
-					config.refreshTokenSecret,
-					config.refreshTokenExpiry,
-				);
-
-				// Store refresh token hash
-				const tokenHash = hashToken(refreshToken);
-				const tokenResult = await tokenRepo.create(user.id, tokenHash);
+				// Generate and persist tokens via tokenService
+				const tokenResult = await tokenService.issueTokens(user.id, user.email);
 
 				if (!tokenResult.ok) {
 					throw tokenResult.error;
 				}
 
-				// Return sanitized user and tokens
-				return {
-					user: sanitizeUser(user),
-					accessToken,
-					refreshToken,
-				};
+				return { user: sanitizeUser(user), ...tokenResult.value };
 			});
 		},
 
@@ -113,35 +81,13 @@ export function createAuthService(
 					throw new Error("Invalid credentials");
 				}
 
-				// Generate tokens
-				const accessToken = await generateAccessToken(
-					user.id,
-					user.email,
-					config.accessTokenSecret,
-					config.accessTokenExpiry,
-				);
-
-				const refreshToken = await generateRefreshToken(
-					user.id,
-					user.email,
-					config.refreshTokenSecret,
-					config.refreshTokenExpiry,
-				);
-
-				// Store refresh token hash
-				const tokenHash = hashToken(refreshToken);
-				const tokenResult = await tokenRepo.create(user.id, tokenHash);
+				const tokenResult = await tokenService.issueTokens(user.id, user.email);
 
 				if (!tokenResult.ok) {
 					throw tokenResult.error;
 				}
 
-				// Return sanitized user and tokens
-				return {
-					user: sanitizeUser(user),
-					accessToken,
-					refreshToken,
-				};
+				return { user: sanitizeUser(user), ...tokenResult.value };
 			});
 		},
 	};
