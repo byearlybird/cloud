@@ -1,6 +1,12 @@
 import { Hono, type MiddlewareHandler } from "hono";
 import type { JwtVariables } from "hono/jwt";
 import { accessTokenSchema } from "@/modules/token/token.schema";
+import {
+	InternalServerError,
+	NotFoundError,
+	UnauthorizedError,
+	ValidationError,
+} from "@/shared/errors";
 import { mergeDocSchema } from "./document.schema";
 import type { DocumentService } from "./document.service";
 
@@ -16,18 +22,18 @@ export function createDocumentRoutes(
 
 			if (!token.success) {
 				console.error("Invalid JWT payload:", token.error);
-				return c.json({ error: "Unauthorized" }, 401);
+				throw new UnauthorizedError("Unauthorized", "INVALID_JWT_PAYLOAD");
 			}
 
 			const doc = await docService.get(token.data.sub, { key });
 
 			if (!doc.ok) {
 				console.error("Failed to get document:", doc.error);
-				return c.json({ error: "Failed to retrieve document" }, 500);
+				throw new InternalServerError("Failed to retrieve document");
 			}
 
 			if (!doc.value) {
-				return c.json({ error: "Document not found" }, 404);
+				throw new NotFoundError("Document not found");
 			}
 
 			return c.json(doc.value, 200);
@@ -38,24 +44,21 @@ export function createDocumentRoutes(
 
 			if (!token.success) {
 				console.error("Invalid JWT payload:", token.error);
-				return c.json({ error: "Unauthorized" }, 401);
+				throw new UnauthorizedError("Unauthorized", "INVALID_JWT_PAYLOAD");
 			}
 
 			const body = await c.req.json();
 			const parsed = mergeDocSchema.safeParse({ key, doc: body });
 
 			if (!parsed.success) {
-				return c.json(
-					{ error: "Invalid request body", details: parsed.error.flatten() },
-					400,
-				);
+				throw new ValidationError(parsed.error.flatten());
 			}
 
 			const result = await docService.merge(token.data.sub, parsed.data);
 
 			if (!result.ok) {
 				console.error("Failed to merge document:", result.error);
-				return c.json({ error: "Failed to merge document" }, 500);
+				throw new InternalServerError("Failed to merge document");
 			}
 
 			return c.body(null, 204);

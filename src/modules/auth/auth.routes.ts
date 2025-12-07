@@ -1,4 +1,10 @@
 import { Hono } from "hono";
+import {
+	ConflictError,
+	InternalServerError,
+	UnauthorizedError,
+	ValidationError,
+} from "@/shared/errors";
 import { signInSchema, signUpSchema } from "./auth.schema";
 import type { AuthService } from "./auth.service";
 
@@ -9,10 +15,7 @@ export function createAuthRoutes(authService: AuthService) {
 			const parsed = signUpSchema.safeParse(body);
 
 			if (!parsed.success) {
-				return c.json(
-					{ error: "Invalid request body", details: parsed.error.flatten() },
-					400,
-				);
+				throw new ValidationError(parsed.error.flatten());
 			}
 
 			const result = await authService.signUp(parsed.data);
@@ -25,10 +28,10 @@ export function createAuthRoutes(authService: AuthService) {
 					result.error instanceof Error &&
 					result.error.message === "User already exists"
 				) {
-					return c.json({ error: "User already exists" }, 409);
+					throw new ConflictError("User already exists");
 				}
 
-				return c.json({ error: "Failed to sign up" }, 500);
+				throw new InternalServerError("Failed to sign up");
 			}
 
 			return c.json(result.value, 201);
@@ -38,10 +41,7 @@ export function createAuthRoutes(authService: AuthService) {
 			const parsed = signInSchema.safeParse(body);
 
 			if (!parsed.success) {
-				return c.json(
-					{ error: "Invalid request body", details: parsed.error.flatten() },
-					400,
-				);
+				throw new ValidationError(parsed.error.flatten());
 			}
 
 			const result = await authService.signIn(parsed.data);
@@ -54,10 +54,10 @@ export function createAuthRoutes(authService: AuthService) {
 					result.error instanceof Error &&
 					result.error.message === "Invalid credentials"
 				) {
-					return c.json({ error: "Invalid email or password" }, 401);
+					throw new UnauthorizedError("Invalid email or password");
 				}
 
-				return c.json({ error: "Failed to sign in" }, 500);
+				throw new InternalServerError("Failed to sign in");
 			}
 
 			return c.json(result.value, 200);
