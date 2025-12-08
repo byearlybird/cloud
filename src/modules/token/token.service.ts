@@ -19,7 +19,9 @@ export type TokenService = {
 			refreshToken: string;
 		}>
 	>;
-	refresh: (refreshToken: string) => Promise<Result<{ accessToken: string }>>;
+	refresh: (
+		refreshToken: string,
+	) => Promise<Result<{ accessToken: string; refreshToken: string }>>;
 	revoke: (refreshToken: string) => Promise<Result<void>>;
 };
 
@@ -88,13 +90,6 @@ export function createTokenService(
 					throw new Error("Token has been revoked");
 				}
 
-				// Update last used timestamp
-				const updateResult = await tokenRepo.updateLastUsed(tokenRecord.id);
-
-				if (!updateResult.ok) {
-					throw updateResult.error;
-				}
-
 				// Generate new access token
 				const accessToken = await generateAccessToken(
 					userId,
@@ -103,7 +98,30 @@ export function createTokenService(
 					config.accessTokenExpiry,
 				);
 
-				return { accessToken };
+				// Generate new refresh token
+				const newRefreshToken = await generateRefreshToken(
+					userId,
+					email,
+					config.refreshTokenSecret,
+					config.refreshTokenExpiry,
+				);
+
+				// Store the new refresh token
+				const newTokenHash = hashToken(newRefreshToken);
+				const createResult = await tokenRepo.create(userId, newTokenHash);
+
+				if (!createResult.ok) {
+					throw createResult.error;
+				}
+
+				// Revoke the old refresh token
+				const revokeResult = await tokenRepo.revoke(tokenHash);
+
+				if (!revokeResult.ok) {
+					throw revokeResult.error;
+				}
+
+				return { accessToken, refreshToken: newRefreshToken };
 			});
 		},
 
