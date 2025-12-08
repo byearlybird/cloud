@@ -25,6 +25,12 @@ export const appRoutes = new Hono()
 			credentials: true,
 		}),
 	)
+	.get("/health", (c) => {
+		return c.json({
+			status: "ok",
+			timestamp: new Date().toISOString(),
+		});
+	})
 	.route("/auth", authRoutes)
 	.route("/tokens", tokenRoutes)
 	.route("/documents", documentRoutes)
