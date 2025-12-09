@@ -39,4 +39,12 @@ export const Result = {
 	mapErr<T, E, F>(r: Result<T, E>, fn: (error: E) => F): Result<T, F> {
 		return r.ok ? r : Result.err(fn(r.error));
 	},
+
+	// Unwrap the result value or throw the error
+	unwrap<T, E>(r: Result<T, E>): T {
+		if (r.ok) {
+			return r.value;
+		}
+		throw r.error;
+	},
 };
