@@ -50,14 +50,14 @@ describe("token.service", () => {
 		const service = createTokenService(repo, config);
 		const userId = crypto.randomUUID();
 		const result = await service.issueTokens(userId, "user@example.com");
+		const value = Result.unwrap(result);
 
-		expect(result.ok).toBe(true);
-		expect(result.value.accessToken.length).toBeGreaterThan(0);
-		expect(result.value.refreshToken.length).toBeGreaterThan(0);
+		expect(value.accessToken.length).toBeGreaterThan(0);
+		expect(value.refreshToken.length).toBeGreaterThan(0);
 		expect(calls).toHaveLength(1);
 		expect(calls[0]?.userId).toBe(userId);
 		const storedHash = calls[0]?.tokenHash;
-		expect(storedHash).toBe(hashToken(result.value.refreshToken));
+		expect(storedHash).toBe(hashToken(value.refreshToken));
 	});
 
 	test("refresh validates the token and updates last used timestamps", async () => {
@@ -97,14 +97,12 @@ describe("token.service", () => {
 		const service = createTokenService(repo, config);
 		const userId = crypto.randomUUID();
 		const issueResult = await service.issueTokens(userId, "user@example.com");
-		if (!issueResult.ok) {
-			throw issueResult.error;
-		}
+		const issueValue = Result.unwrap(issueResult);
 
-		const refreshResult = await service.refresh(issueResult.value.refreshToken);
+		const refreshResult = await service.refresh(issueValue.refreshToken);
+		const refreshValue = Result.unwrap(refreshResult);
 
-		expect(refreshResult.ok).toBe(true);
-		expect(refreshResult.value.accessToken.length).toBeGreaterThan(0);
+		expect(refreshValue.accessToken.length).toBeGreaterThan(0);
 		expect(updateCount).toBe(1);
 	});
 
@@ -129,13 +127,11 @@ describe("token.service", () => {
 		const service = createTokenService(repo, config);
 		const userId = crypto.randomUUID();
 		const issueResult = await service.issueTokens(userId, "user@example.com");
-		if (!issueResult.ok) {
-			throw issueResult.error;
-		}
+		const issueValue = Result.unwrap(issueResult);
 
-		await service.revoke(issueResult.value.refreshToken);
+		await service.revoke(issueValue.refreshToken);
 
 		expect(revokedHashes).toHaveLength(1);
-		expect(revokedHashes[0]).toBe(hashToken(issueResult.value.refreshToken));
+		expect(revokedHashes[0]).toBe(hashToken(issueValue.refreshToken));
 	});
 });

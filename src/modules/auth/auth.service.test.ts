@@ -60,17 +60,20 @@ describe("auth.service", () => {
 		};
 
 		const result = await service.signUp(dto);
+		const value = Result.unwrap(result);
 
-		expect(result.ok).toBe(true);
-		expect(result.value.user.email).toBe(dto.email);
-		expect(
-			"hashedPassword" in (result.value.user as Record<string, unknown>),
-		).toBe(false);
-		expect(result.value.accessToken).toBe("access-token");
-		expect(result.value.refreshToken).toBe("refresh-token");
+		expect(value.user.email).toBe(dto.email);
+		expect("hashedPassword" in (value.user as Record<string, unknown>)).toBe(
+			false,
+		);
+		expect(value.accessToken).toBe("access-token");
+		expect(value.refreshToken).toBe("refresh-token");
 		expect(savedHashedPassword).not.toBeNull();
 		expect(savedHashedPassword).not.toBe(dto.password);
-		expect(issuedTokensFor?.email).toBe(dto.email);
+		expect(issuedTokensFor).toBeTruthy();
+		expect(
+			(issuedTokensFor as unknown as { userId: string; email: string }).email,
+		).toBe(dto.email);
 	});
 
 	test("signUp fails when the email already exists", async () => {
@@ -106,6 +109,7 @@ describe("auth.service", () => {
 		const result = await service.signUp(dto);
 
 		expect(result.ok).toBe(false);
+		if (result.ok) throw new Error("Expected result to be error");
 		expect(result.error).toBeInstanceOf(Error);
 		expect(result.error.message).toBe("User already exists");
 	});
@@ -148,14 +152,14 @@ describe("auth.service", () => {
 			email: existingUser.email,
 			password,
 		});
+		const value = Result.unwrap(result);
 
-		expect(result.ok).toBe(true);
-		expect(result.value.accessToken).toBe("issued-access");
-		expect(result.value.refreshToken).toBe("issued-refresh");
+		expect(value.accessToken).toBe("issued-access");
+		expect(value.refreshToken).toBe("issued-refresh");
 		expect(issueCount).toBe(1);
-		expect(
-			"hashedPassword" in (result.value.user as Record<string, unknown>),
-		).toBe(false);
+		expect("hashedPassword" in (value.user as Record<string, unknown>)).toBe(
+			false,
+		);
 	});
 
 	test("signIn rejects invalid passwords", async () => {
@@ -195,6 +199,7 @@ describe("auth.service", () => {
 		});
 
 		expect(result.ok).toBe(false);
+		if (result.ok) throw new Error("Expected result to be error");
 		expect(result.error).toBeInstanceOf(Error);
 		expect(result.error.message).toBe("Invalid credentials");
 		expect(issueCount).toBe(0);

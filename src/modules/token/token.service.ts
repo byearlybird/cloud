@@ -90,6 +90,13 @@ export function createTokenService(
 					throw new Error("Token has been revoked");
 				}
 
+				// Update last used timestamp
+				const updateResult = await tokenRepo.updateLastUsed(tokenRecord.id);
+
+				if (!updateResult.ok) {
+					throw updateResult.error;
+				}
+
 				// Generate new access token
 				const accessToken = await generateAccessToken(
 					userId,

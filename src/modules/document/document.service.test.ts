@@ -50,9 +50,9 @@ describe("document.service", () => {
 
 		const service = createDocumentService(repo);
 		const result = await service.get(userId, { key: documentKey });
+		const value = Result.unwrap(result);
 
-		expect(result.ok).toBe(true);
-		expect(result.value).toBe(storedDoc);
+		expect(value).toBe(storedDoc);
 	});
 
 	test("merge updates existing documents using merged content", async () => {
@@ -84,9 +84,10 @@ describe("document.service", () => {
 			key: documentKey,
 			doc: incomingDoc,
 		});
+		Result.unwrap(result);
 
-		expect(result.ok).toBe(true);
-		expect(updatedDoc).toEqual(expectedMerged);
+		expect(updatedDoc).not.toBeNull();
+		expect(updatedDoc as unknown as AnyJsonDoc).toEqual(expectedMerged);
 	});
 
 	test("merge inserts documents that do not exist yet", async () => {
@@ -112,8 +113,9 @@ describe("document.service", () => {
 			key: documentKey,
 			doc: incomingDoc,
 		});
+		Result.unwrap(result);
 
-		expect(result.ok).toBe(true);
-		expect(insertedDoc).toEqual(incomingDoc);
+		expect(insertedDoc).not.toBeNull();
+		expect(insertedDoc as unknown as AnyJsonDoc).toEqual(incomingDoc);
 	});
 });

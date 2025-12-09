@@ -1,7 +1,7 @@
 import type { TokenService } from "@/modules/token/token.service";
 import type { UserRepo } from "@/modules/user/user.repo";
 import { Result } from "@/shared/result";
-import { hashPassword, sanitizeUser } from "./auth.domain";
+import { hashPassword, sanitizeUser, verifyPassword } from "./auth.domain";
 import type { AuthResponse, SignInDTO, SignUpDTO } from "./auth.schema";
 import { signInSchema, signUpSchema } from "./auth.schema";
 
@@ -72,7 +72,7 @@ export function createAuthService(
 				const user = userResult.value;
 
 				// Verify password
-				const isPasswordValid = await Bun.password.verify(
+				const isPasswordValid = await verifyPassword(
 					validated.password,
 					user.hashedPassword,
 				);
