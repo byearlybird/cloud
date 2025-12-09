@@ -1,4 +1,3 @@
-import { password } from "bun";
 import type { User } from "@/db/schema";
 
 /**
