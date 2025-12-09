@@ -1,0 +1,75 @@
+meta {
+  name: Patch Document
+  type: http
+  seq: 2
+}
+
+patch {
+  url: http://localhost:3000/documents/:key
+  body: json
+  auth: bearer
+}
+
+params:path {
+  key: demo
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0N2ZiMmM2ZC0wODM0LTQ1YzctOTExMi1kM2RjMDg1YmEyNTUiLCJlbWFpbCI6Im5pY2tAZ21haWwuY29tIiwiZXhwIjoxNzY1MTY0MTg4fQ.t-6C2KnalyOFU68p6hpe3zkvNvXjgLZ6mr6SYVyJb5s
+}
+
+body:json {
+  {
+    "jsonapi": {
+      "version": "1.1"
+    },
+    "meta": {
+      "latest": "2025-12-07T10:30:00Z"
+    },
+    "data": [
+      {
+        "type": "document",
+        "id": "doc-123",
+        "attributes": {
+          "title": "My Document",
+          "content": "Hello world",
+          "status": "archived",
+          "tags": ["example", "sample"]
+        },
+        "meta": {
+          "eventstamps": {
+            "title": "2025-12-01T08:00:00Z",
+            "content": "2025-12-07T10:30:00Z",
+            "status": "2025-12-02T09:16:00Z",
+            "tags": "2025-12-03T11:20:00Z"
+          },
+          "latest": "2025-12-07T10:30:00Z",
+          "deletedAt": null
+        }
+      },
+      {
+        "type": "document",
+        "id": "doc-456",
+        "attributes": {
+          "title": "Another Document",
+          "author": "John Doe",
+          "wordCount": 1500
+        },
+        "meta": {
+          "eventstamps": {
+            "title": "2025-11-15T14:20:00Z",
+            "author": "2025-11-15T14:20:00Z",
+            "wordCount": "2025-12-05T16:45:00Z"
+          },
+          "latest": "2025-12-05T16:45:00Z",
+          "deletedAt": null
+        }
+      }
+    ]
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

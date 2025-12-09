@@ -1,4 +1,4 @@
-import { Database } from "bun:sqlite";
+import { Database as SQLite } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { drizzle } from "drizzle-orm/bun-sqlite";
@@ -16,7 +16,7 @@ import * as schema from "./schema";
 mkdirSync(dirname(env.DATABASE_PATH), { recursive: true });
 
 // Initialize SQLite database with Bun's native driver
-const client = new Database(env.DATABASE_PATH, { create: true });
+const client = new SQLite(env.DATABASE_PATH, { create: true });
 
 // Enable WAL mode for better concurrency
 client.run("PRAGMA journal_mode = WAL;");
@@ -35,3 +35,5 @@ export const db = drizzle({
 export function closeDatabase() {
 	client.close();
 }
+
+export type Database = typeof db;

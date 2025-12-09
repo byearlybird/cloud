@@ -8,5 +8,5 @@
 		"stripInternal": true,
 		"strict": true
 	},
-	"include": ["src/app-type.ts"]
+	"include": ["src/index.ts"]
 }

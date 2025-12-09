@@ -1,12 +1,18 @@
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import type { db as database } from "./index";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { migrate as drizzleMigrate } from "drizzle-orm/bun-sqlite/migrator";
+import { env } from "../env";
+import { db } from ".";
 
-export async function runMigrations(db: typeof database) {
+export async function migrate() {
 	try {
-		await migrate(db, { migrationsFolder: "drizzle" });
-		console.log("Migration completed");
-	} catch (error) {
-		console.error("Error during migration:", error);
+		mkdirSync(dirname(env.DATABASE_PATH), { recursive: true });
+		const result = await drizzleMigrate(db, { migrationsFolder: "./drizzle" });
+		if (result) {
+			console.info(result);
+		}
+	} catch (ex) {
+		console.error(ex);
 		process.exit(1);
 	}
 }
