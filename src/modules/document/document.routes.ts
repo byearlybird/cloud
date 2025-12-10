@@ -1,5 +1,6 @@
 import { Hono, type MiddlewareHandler } from "hono";
 import type { JwtVariables } from "hono/jwt";
+import { validator } from "hono/validator";
 import { accessTokenSchema } from "@/modules/token/token.schema";
 import {
 	InternalServerError,
@@ -39,29 +40,34 @@ export function createDocumentRoutes(
 
 			return okResponse(c, doc.value);
 		})
-		.patch("/:key", async (c) => {
-			const key = c.req.param("key");
-			const token = accessTokenSchema.safeParse(c.get("jwtPayload"));
+		.patch(
+			"/:key",
+			validator("json", (value, _c) => {
+				const key = _c.req.param("key");
+				const parsed = mergeDocSchema.safeParse({ key, doc: value });
+				if (!parsed.success) {
+					throw new ValidationError(parsed.error);
+				}
+				return parsed.data;
+			}),
+			async (c) => {
+				const token = accessTokenSchema.safeParse(c.get("jwtPayload"));
 
-			if (!token.success) {
-				console.error("Invalid JWT payload:", token.error);
-				throw new UnauthorizedError("Unauthorized", "INVALID_JWT_PAYLOAD");
-			}
+				if (!token.success) {
+					console.error("Invalid JWT payload:", token.error);
+					throw new UnauthorizedError("Unauthorized", "INVALID_JWT_PAYLOAD");
+				}
 
-			const body = await c.req.json();
-			const parsed = mergeDocSchema.safeParse({ key, doc: body });
+				const data = c.req.valid("json");
 
-			if (!parsed.success) {
-				throw new ValidationError(parsed.error.flatten());
-			}
+				const result = await docService.merge(token.data.sub, data);
 
-			const result = await docService.merge(token.data.sub, parsed.data);
+				if (!result.ok) {
+					console.error("Failed to merge document:", result.error);
+					throw new InternalServerError("Failed to merge document");
+				}
 
-			if (!result.ok) {
-				console.error("Failed to merge document:", result.error);
-				throw new InternalServerError("Failed to merge document");
-			}
-
-			return noContentResponse(c);
-		});
+				return noContentResponse(c);
+			},
+		);
 }
