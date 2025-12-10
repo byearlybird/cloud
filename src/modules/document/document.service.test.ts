@@ -13,20 +13,19 @@ const documentKey = "settings";
 
 function buildDocument(content: string, latest: string): MergeDocDTO["doc"] {
 	return {
-		jsonapi: { version: "1.1" },
-		meta: { latest },
-		data: [
-			{
-				type: "note",
+		type: "note",
+		latest,
+		resources: {
+			"note-1": {
 				id: "note-1",
 				attributes: { body: content },
 				meta: {
-					eventstamps: { client: latest },
+					eventstamps: { body: latest },
 					latest,
 					deletedAt: null,
 				},
 			},
-		],
+		},
 	};
 }
 

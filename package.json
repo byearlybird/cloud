@@ -28,7 +28,7 @@
 		"publish": "bun publish --access public"
 	},
 	"dependencies": {
-		"@byearlybird/starling": "^0.11.0",
+		"@byearlybird/starling": "^0.12.0",
 		"drizzle-orm": "^1.0.0-beta.2-b782ae1",
 		"hono": "^4.10.4",
 		"zod": "^4.1.12"

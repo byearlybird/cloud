@@ -1,31 +1,26 @@
 import z from "zod";
 
-const jsonApiResourceMetaSchema = z.object({
+const resourceObjectMetaSchema = z.object({
 	eventstamps: z.record(z.string(), z.string()),
 	latest: z.string(),
 	deletedAt: z.string().nullable(),
 });
 
-const jsonApiResourceSchema = z.object({
-	type: z.string(),
+const resourceObjectSchema = z.object({
 	id: z.string(),
 	attributes: z.record(z.string(), z.unknown()),
-	meta: jsonApiResourceMetaSchema,
+	meta: resourceObjectMetaSchema,
 });
 
-const jsonApiDocumentSchema = z.object({
-	jsonapi: z.object({
-		version: z.literal("1.1"),
-	}),
-	meta: z.object({
-		latest: z.string(),
-	}),
-	data: z.array(jsonApiResourceSchema),
+const starlingDocumentSchema = z.object({
+	type: z.string(),
+	latest: z.string(),
+	resources: z.record(z.string(), resourceObjectSchema),
 });
 
 export const mergeDocSchema = z.object({
 	key: z.string(),
-	doc: jsonApiDocumentSchema,
+	doc: starlingDocumentSchema,
 });
 
 export const getDocSchema = z.object({
