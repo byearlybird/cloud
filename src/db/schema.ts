@@ -1,4 +1,4 @@
-import type { AnyObject, JsonDocument } from "@byearlybird/starling";
+import type { AnyObject, StarlingDocument } from "@byearlybird/starling";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import * as t from "drizzle-orm/sqlite-core";
 import { sqliteTable } from "drizzle-orm/sqlite-core";
@@ -76,7 +76,7 @@ export const documents = sqliteTable(
 		documentKey: t.text().notNull(), // e.g., "settings", "notes"
 		documentData: t
 			.text({ mode: "json" })
-			.$type<JsonDocument<AnyObject>>()
+			.$type<StarlingDocument<AnyObject>>()
 			.notNull(),
 		...timestamps,
 	}),
