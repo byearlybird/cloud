@@ -19,8 +19,9 @@
 	},
 	"dependencies": {
 		"@byearlybird/cloud": "workspace:*",
-		"hono": "^4.10.4",
+		"@byearlybird/crypto": "^0.0.2",
 		"@tanstack/store": "^0.7.0",
+		"hono": "^4.10.4",
 		"idb-keyval": "^6.2.2"
 	},
 	"devDependencies": {

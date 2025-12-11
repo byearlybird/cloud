@@ -34,6 +34,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@byearlybird/cloud": "workspace:*",
+        "@byearlybird/crypto": "^0.0.2",
         "@tanstack/store": "^0.7.0",
         "hono": "^4.10.4",
         "idb-keyval": "^6.2.2",
@@ -100,6 +101,8 @@
     "@byearlybird/cloud": ["@byearlybird/cloud@workspace:apps/cloud"],
 
     "@byearlybird/cloud-client": ["@byearlybird/cloud-client@workspace:packages/cloud-client"],
+
+    "@byearlybird/crypto": ["@byearlybird/crypto@0.0.2", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-q/pNMojEytjREoO4ekuZsDTI3tJ7McRq6UG71ZV1jpNsbzJQN4Oxs6Udds1m5SZJ+CN1blWF2A5leUTko2/F6A=="],
 
     "@byearlybird/starling": ["@byearlybird/starling@0.12.0", "", {}, "sha512-95TuXx29jRCL3Br9aNPi/rBgt3whEzpMbR9H6uhcLcj0Sy3KY1I6KMdiZYAXLN7C+cs0TqNwDl1nxywVfaflhw=="],
 

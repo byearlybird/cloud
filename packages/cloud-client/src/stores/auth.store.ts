@@ -1,6 +1,7 @@
 import { Store } from "@tanstack/store";
 import { get, set } from "idb-keyval";
 import type { Client } from "../client";
+import type { KeyStore } from "./key.store";
 
 /**
  * User type (without password)
@@ -91,9 +92,10 @@ const persistState = async (state: AuthState) => {
 /**
  * Create an auth store with RPC client integration
  * @param client - The Hono RPC client
+ * @param keyStore - The key store for managing cryptographic keys
  * @returns Auth store instance with methods
  */
-export const createAuthStore = (client: Client) => {
+export const createAuthStore = (client: Client, keyStore: KeyStore) => {
 	const store = new Store<AuthState>(initialState);
 
 	// Subscribe to store changes and persist to IndexedDB
@@ -114,15 +116,15 @@ export const createAuthStore = (client: Client) => {
 
 	/**
 	 * Sign up a new user
+	 * Generates vaultKey and masterKey via keyStore
 	 */
-	const signUp = async (
-		email: string,
-		password: string,
-		encryptedMasterKey: string,
-	) => {
+	const signUp = async (email: string, password: string) => {
 		store.setState((s) => ({ ...s, isLoading: true, error: null }));
 
 		try {
+			// Generate all crypto keys via keyStore
+			const { encryptedMasterKey } = await keyStore.generateKeys();
+
 			const res = await client.auth.signup.$post({
 				json: { email, password, encryptedMasterKey },
 			});
@@ -169,8 +171,9 @@ export const createAuthStore = (client: Client) => {
 
 	/**
 	 * Sign in an existing user
+	 * Requires vaultKey to decrypt the masterKey via keyStore
 	 */
-	const signIn = async (email: string, password: string) => {
+	const signIn = async (email: string, password: string, vaultKey: string) => {
 		store.setState((s) => ({ ...s, isLoading: true, error: null }));
 
 		try {
@@ -194,6 +197,12 @@ export const createAuthStore = (client: Client) => {
 					accessToken: string;
 					refreshToken: string;
 				};
+
+				// Unlock vault via keyStore
+				await keyStore.unlockVault(
+					responseData.user.encryptedMasterKey,
+					vaultKey,
+				);
 
 				store.setState({
 					user: responseData.user,
@@ -295,6 +304,9 @@ export const createAuthStore = (client: Client) => {
 
 		// Clear local state
 		store.setState(initialState);
+
+		// Clear keys via keyStore
+		keyStore.clear();
 	};
 
 	/**
