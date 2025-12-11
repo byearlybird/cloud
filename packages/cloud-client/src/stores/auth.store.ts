@@ -1,4 +1,5 @@
 import { Store } from "@tanstack/store";
+import { get, set } from "idb-keyval";
 import type { Client } from "../client";
 
 /**
@@ -37,12 +38,79 @@ const initialState: AuthState = {
 };
 
 /**
+ * IndexedDB storage keys
+ */
+const STORAGE_KEYS = {
+	user: "auth:user",
+	accessToken: "auth:accessToken",
+	refreshToken: "auth:refreshToken",
+	isAuthenticated: "auth:isAuthenticated",
+} as const;
+
+/**
+ * Load persisted auth state from IndexedDB
+ */
+const loadPersistedState = async (): Promise<Partial<AuthState>> => {
+	try {
+		const [user, accessToken, refreshToken, isAuthenticated] =
+			await Promise.all([
+				get(STORAGE_KEYS.user),
+				get(STORAGE_KEYS.accessToken),
+				get(STORAGE_KEYS.refreshToken),
+				get(STORAGE_KEYS.isAuthenticated),
+			]);
+
+		return {
+			user: user ?? null,
+			accessToken: accessToken ?? null,
+			refreshToken: refreshToken ?? null,
+			isAuthenticated: isAuthenticated ?? false,
+		};
+	} catch (error) {
+		console.error("Failed to load auth state:", error);
+		return {};
+	}
+};
+
+/**
+ * Persist auth state to IndexedDB
+ */
+const persistState = async (state: AuthState) => {
+	try {
+		await Promise.all([
+			set(STORAGE_KEYS.user, state.user),
+			set(STORAGE_KEYS.accessToken, state.accessToken),
+			set(STORAGE_KEYS.refreshToken, state.refreshToken),
+			set(STORAGE_KEYS.isAuthenticated, state.isAuthenticated),
+		]);
+	} catch (error) {
+		console.error("Failed to persist auth state:", error);
+	}
+};
+
+/**
  * Create an auth store with RPC client integration
  * @param client - The Hono RPC client
  * @returns Auth store instance with methods
  */
 export const createAuthStore = (client: Client) => {
 	const store = new Store<AuthState>(initialState);
+
+	// Subscribe to store changes and persist to IndexedDB
+	store.subscribe(() => {
+		persistState(store.state);
+	});
+
+	/**
+	 * Load persisted state from IndexedDB
+	 */
+	const load = async () => {
+		const persistedState = await loadPersistedState();
+		store.setState({
+			...store.state,
+			...persistedState,
+		});
+	};
 
 	/**
 	 * Sign up a new user
@@ -236,6 +304,7 @@ export const createAuthStore = (client: Client) => {
 
 	return {
 		store,
+		load,
 		signUp,
 		signIn,
 		refresh,

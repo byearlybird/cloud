@@ -9,7 +9,9 @@
 			"default": "./dist/index.js"
 		}
 	},
-	"files": ["dist"],
+	"files": [
+		"dist"
+	],
 	"scripts": {
 		"build": "bun build src/index.ts --outdir dist --target node --sourcemap=external && bun run build:types",
 		"build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
@@ -18,7 +20,8 @@
 	"dependencies": {
 		"@byearlybird/cloud": "workspace:*",
 		"hono": "^4.10.4",
-		"@tanstack/store": "^0.7.0"
+		"@tanstack/store": "^0.7.0",
+		"idb-keyval": "^6.2.2"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",

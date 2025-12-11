@@ -2,7 +2,10 @@
 	"name": "@byearlybird/monorepo",
 	"version": "1.0.0",
 	"private": true,
-	"workspaces": ["apps/*", "packages/*"],
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
 	"scripts": {
 		"dev": "bun run --filter @byearlybird/cloud dev",
 		"start": "bun run --filter @byearlybird/cloud start",
