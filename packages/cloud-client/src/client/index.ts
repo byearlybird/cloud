@@ -1,5 +1,5 @@
+import type { AppRoutes } from "@byearlybird/cloud";
 import { hc } from "hono/client";
-import type { AppType } from "@byearlybird/cloud/app";
 
 /**
  * Create a type-safe RPC client for the Cloud API
@@ -7,7 +7,7 @@ import type { AppType } from "@byearlybird/cloud/app";
  * @returns A fully typed client that infers types from the API routes
  */
 export const createClient = (baseUrl: string) => {
-	return hc<AppType>(baseUrl);
+	return hc<AppRoutes>(baseUrl);
 };
 
 export type Client = ReturnType<typeof createClient>;

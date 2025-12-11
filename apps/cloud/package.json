@@ -7,10 +7,6 @@
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts"
-		},
-		"./app": {
-			"types": "./src/app/index.ts",
-			"default": "./src/app/index.ts"
 		}
 	},
 	"files": [
