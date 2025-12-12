@@ -1,13 +1,13 @@
 import type { TokenService } from "@/modules/token/token.service";
 import type { UserRepo } from "@/modules/user/user.repo";
-import { Result } from "@/shared/result";
+import { ConflictError, UnauthorizedError } from "@/shared/errors";
 import { hashPassword, sanitizeUser, verifyPassword } from "./auth.domain";
 import type { AuthResponse, SignInDTO, SignUpDTO } from "./auth.schema";
 import { signInSchema, signUpSchema } from "./auth.schema";
 
 export type AuthService = {
-	signUp: (dto: SignUpDTO) => Promise<Result<AuthResponse>>;
-	signIn: (dto: SignInDTO) => Promise<Result<AuthResponse>>;
+	signUp: (dto: SignUpDTO) => Promise<AuthResponse>;
+	signIn: (dto: SignInDTO) => Promise<AuthResponse>;
 };
 
 export function createAuthService(
@@ -16,79 +16,55 @@ export function createAuthService(
 ): AuthService {
 	return {
 		async signUp(dto) {
-			return Result.wrapAsync(async () => {
-				// Validate input
-				const validated = signUpSchema.parse(dto);
+			// Validate input
+			const validated = signUpSchema.parse(dto);
 
-				// Check if user already exists
-				const existingUser = await userRepo.getByEmail(validated.email);
-				if (existingUser.ok && existingUser.value) {
-					throw new Error("User already exists");
-				}
+			// Check if user already exists
+			const existingUser = await userRepo.getByEmail(validated.email);
+			if (existingUser) {
+				throw new ConflictError("User already exists");
+			}
 
-				// Hash password
-				const hashedPassword = await hashPassword(validated.password);
+			// Hash password
+			const hashedPassword = await hashPassword(validated.password);
 
-				// Create user
-				const userResult = await userRepo.create(
-					validated.email,
-					hashedPassword,
-					validated.encryptedMasterKey,
-				);
+			// Create user
+			const user = await userRepo.create(
+				validated.email,
+				hashedPassword,
+				validated.encryptedMasterKey,
+			);
 
-				if (!userResult.ok) {
-					throw userResult.error;
-				}
+			// Generate and persist tokens via tokenService
+			const tokens = await tokenService.issueTokens(user.id, user.email);
 
-				const user = userResult.value;
-
-				// Generate and persist tokens via tokenService
-				const tokenResult = await tokenService.issueTokens(user.id, user.email);
-
-				if (!tokenResult.ok) {
-					throw tokenResult.error;
-				}
-
-				return { user: sanitizeUser(user), ...tokenResult.value };
-			});
+			return { user: sanitizeUser(user), ...tokens };
 		},
 
 		async signIn(dto) {
-			return Result.wrapAsync(async () => {
-				// Validate input
-				const validated = signInSchema.parse(dto);
+			// Validate input
+			const validated = signInSchema.parse(dto);
 
-				// Get user by email
-				const userResult = await userRepo.getByEmail(validated.email);
+			// Get user by email
+			const user = await userRepo.getByEmail(validated.email);
 
-				if (!userResult.ok) {
-					throw userResult.error;
-				}
+			if (!user) {
+				throw new UnauthorizedError("Invalid credentials");
+			}
 
-				if (!userResult.value) {
-					throw new Error("Invalid credentials");
-				}
+			// Verify password
+			const isPasswordValid = await verifyPassword(
+				validated.password,
+				user.hashedPassword,
+			);
 
-				const user = userResult.value;
+			if (!isPasswordValid) {
+				throw new UnauthorizedError("Invalid credentials");
+			}
 
-				// Verify password
-				const isPasswordValid = await verifyPassword(
-					validated.password,
-					user.hashedPassword,
-				);
+			const tokens = await tokenService.issueTokens(user.id, user.email);
 
-				if (!isPasswordValid) {
-					throw new Error("Invalid credentials");
-				}
-
-				const tokenResult = await tokenService.issueTokens(user.id, user.email);
-
-				if (!tokenResult.ok) {
-					throw tokenResult.error;
-				}
-
-				return { user: sanitizeUser(user), ...tokenResult.value };
-			});
+			return { user: sanitizeUser(user), ...tokens };
 		},
 	};
 }

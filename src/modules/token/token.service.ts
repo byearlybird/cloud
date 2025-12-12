@@ -1,5 +1,5 @@
 import type { TokenRepo } from "@/modules/token/token.repo";
-import { Result } from "@/shared/result";
+import { InvalidTokenError } from "@/shared/errors";
 
 import {
 	generateAccessToken,
@@ -13,16 +13,14 @@ export type TokenService = {
 	issueTokens: (
 		userId: string,
 		email: string,
-	) => Promise<
-		Result<{
-			accessToken: string;
-			refreshToken: string;
-		}>
-	>;
+	) => Promise<{
+		accessToken: string;
+		refreshToken: string;
+	}>;
 	refresh: (
 		refreshToken: string,
-	) => Promise<Result<{ accessToken: string; refreshToken: string }>>;
-	revoke: (refreshToken: string) => Promise<Result<void>>;
+	) => Promise<{ accessToken: string; refreshToken: string }>;
+	revoke: (refreshToken: string) => Promise<void>;
 };
 
 export function createTokenService(
@@ -31,117 +29,79 @@ export function createTokenService(
 ): TokenService {
 	return {
 		async issueTokens(userId, email) {
-			return Result.wrapAsync(async () => {
-				const accessToken = await generateAccessToken(
-					userId,
-					email,
-					config.accessTokenSecret,
-					config.accessTokenExpiry,
-				);
+			const accessToken = await generateAccessToken(
+				userId,
+				email,
+				config.accessTokenSecret,
+				config.accessTokenExpiry,
+			);
 
-				const refreshToken = await generateRefreshToken(
-					userId,
-					email,
-					config.refreshTokenSecret,
-					config.refreshTokenExpiry,
-				);
+			const refreshToken = await generateRefreshToken(
+				userId,
+				email,
+				config.refreshTokenSecret,
+				config.refreshTokenExpiry,
+			);
 
-				const tokenHash = hashToken(refreshToken);
-				const tokenResult = await tokenRepo.create(userId, tokenHash);
+			const tokenHash = hashToken(refreshToken);
+			await tokenRepo.create(userId, tokenHash);
 
-				if (!tokenResult.ok) {
-					throw tokenResult.error;
-				}
-
-				return { accessToken, refreshToken };
-			});
+			return { accessToken, refreshToken };
 		},
 
 		async refresh(refreshToken) {
-			return Result.wrapAsync(async () => {
-				// Verify JWT signature and extract payload
-				const verifyResult = await verifyRefreshToken(
-					refreshToken,
-					config.refreshTokenSecret,
-				);
+			// Verify JWT signature and extract payload
+			const { sub: userId, email } = await verifyRefreshToken(
+				refreshToken,
+				config.refreshTokenSecret,
+			);
 
-				if (!verifyResult.ok) {
-					throw new Error("Invalid token");
-				}
+			// Hash token and lookup in database
+			const tokenHash = hashToken(refreshToken);
+			const tokenRecord = await tokenRepo.getByHash(tokenHash);
 
-				const { sub: userId, email } = verifyResult.value;
+			if (!tokenRecord) {
+				throw new InvalidTokenError("Invalid token");
+			}
 
-				// Hash token and lookup in database
-				const tokenHash = hashToken(refreshToken);
-				const tokenResult = await tokenRepo.getByHash(tokenHash);
+			// Check if token is revoked
+			if (tokenRecord.revokedAt !== null) {
+				throw new InvalidTokenError("Token has been revoked");
+			}
 
-				if (!tokenResult.ok) {
-					throw tokenResult.error;
-				}
+			// Update last used timestamp
+			await tokenRepo.updateLastUsed(tokenRecord.id);
 
-				if (!tokenResult.value) {
-					throw new Error("Invalid token");
-				}
+			// Generate new access token
+			const accessToken = await generateAccessToken(
+				userId,
+				email,
+				config.accessTokenSecret,
+				config.accessTokenExpiry,
+			);
 
-				const tokenRecord = tokenResult.value;
+			// Generate new refresh token
+			const newRefreshToken = await generateRefreshToken(
+				userId,
+				email,
+				config.refreshTokenSecret,
+				config.refreshTokenExpiry,
+			);
 
-				// Check if token is revoked
-				if (tokenRecord.revokedAt !== null) {
-					throw new Error("Token has been revoked");
-				}
+			// Store the new refresh token
+			const newTokenHash = hashToken(newRefreshToken);
+			await tokenRepo.create(userId, newTokenHash);
 
-				// Update last used timestamp
-				const updateResult = await tokenRepo.updateLastUsed(tokenRecord.id);
+			// Revoke the old refresh token
+			await tokenRepo.revoke(tokenHash);
 
-				if (!updateResult.ok) {
-					throw updateResult.error;
-				}
-
-				// Generate new access token
-				const accessToken = await generateAccessToken(
-					userId,
-					email,
-					config.accessTokenSecret,
-					config.accessTokenExpiry,
-				);
-
-				// Generate new refresh token
-				const newRefreshToken = await generateRefreshToken(
-					userId,
-					email,
-					config.refreshTokenSecret,
-					config.refreshTokenExpiry,
-				);
-
-				// Store the new refresh token
-				const newTokenHash = hashToken(newRefreshToken);
-				const createResult = await tokenRepo.create(userId, newTokenHash);
-
-				if (!createResult.ok) {
-					throw createResult.error;
-				}
-
-				// Revoke the old refresh token
-				const revokeResult = await tokenRepo.revoke(tokenHash);
-
-				if (!revokeResult.ok) {
-					throw revokeResult.error;
-				}
-
-				return { accessToken, refreshToken: newRefreshToken };
-			});
+			return { accessToken, refreshToken: newRefreshToken };
 		},
 
 		async revoke(refreshToken) {
-			return Result.wrapAsync(async () => {
-				// Hash token and revoke
-				const tokenHash = hashToken(refreshToken);
-				const revokeResult = await tokenRepo.revoke(tokenHash);
-
-				if (!revokeResult.ok) {
-					throw revokeResult.error;
-				}
-			});
+			// Hash token and revoke
+			const tokenHash = hashToken(refreshToken);
+			await tokenRepo.revoke(tokenHash);
 		},
 	};
 }

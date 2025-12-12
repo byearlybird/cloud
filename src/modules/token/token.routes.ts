@@ -1,10 +1,6 @@
 import { Hono } from "hono";
 import { validator } from "hono/validator";
-import {
-	InternalServerError,
-	InvalidTokenError,
-	ValidationError,
-} from "@/shared/errors";
+import { ValidationError } from "@/shared/errors";
 import { noContentResponse, okResponse } from "@/shared/responses";
 import { refreshTokenDTO } from "./token.schema";
 import type { TokenService } from "./token.service";
@@ -22,15 +18,8 @@ export function createTokenRoutes(tokenService: TokenService) {
 			}),
 			async (c) => {
 				const { refreshToken } = c.req.valid("json");
-
-				const result = await tokenService.refresh(refreshToken);
-
-				if (!result.ok) {
-					console.error("Failed to refresh token:", result.error);
-					throw new InvalidTokenError();
-				}
-
-				return okResponse(c, result.value);
+				const tokens = await tokenService.refresh(refreshToken);
+				return okResponse(c, tokens);
 			},
 		)
 		.post(
@@ -44,14 +33,7 @@ export function createTokenRoutes(tokenService: TokenService) {
 			}),
 			async (c) => {
 				const { refreshToken } = c.req.valid("json");
-
-				const result = await tokenService.revoke(refreshToken);
-
-				if (!result.ok) {
-					console.error("Failed to revoke token:", result.error);
-					throw new InternalServerError("Failed to revoke token");
-				}
-
+				await tokenService.revoke(refreshToken);
 				return noContentResponse(c);
 			},
 		);

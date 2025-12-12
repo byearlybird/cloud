@@ -1,11 +1,6 @@
 import { Hono } from "hono";
 import { validator } from "hono/validator";
-import {
-	ConflictError,
-	InternalServerError,
-	UnauthorizedError,
-	ValidationError,
-} from "@/shared/errors";
+import { ValidationError } from "@/shared/errors";
 import { createdResponse, okResponse } from "@/shared/responses";
 import { signInSchema, signUpSchema } from "./auth.schema";
 import type { AuthService } from "./auth.service";
@@ -23,24 +18,8 @@ export function createAuthRoutes(authService: AuthService) {
 			}),
 			async (c) => {
 				const data = c.req.valid("json");
-
-				const result = await authService.signUp(data);
-
-				if (!result.ok) {
-					console.error("Failed to sign up:", result.error);
-
-					// Check for specific error types
-					if (
-						result.error instanceof Error &&
-						result.error.message === "User already exists"
-					) {
-						throw new ConflictError("User already exists");
-					}
-
-					throw new InternalServerError("Failed to sign up");
-				}
-
-				return createdResponse(c, result.value);
+				const response = await authService.signUp(data);
+				return createdResponse(c, response);
 			},
 		)
 		.post(
@@ -54,24 +33,8 @@ export function createAuthRoutes(authService: AuthService) {
 			}),
 			async (c) => {
 				const data = c.req.valid("json");
-
-				const result = await authService.signIn(data);
-
-				if (!result.ok) {
-					console.error("Failed to sign in:", result.error);
-
-					// Don't leak information about whether user exists
-					if (
-						result.error instanceof Error &&
-						result.error.message === "Invalid credentials"
-					) {
-						throw new UnauthorizedError("Invalid email or password");
-					}
-
-					throw new InternalServerError("Failed to sign in");
-				}
-
-				return okResponse(c, result.value);
+				const response = await authService.signIn(data);
+				return okResponse(c, response);
 			},
 		);
 }
