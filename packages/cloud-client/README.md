@@ -18,20 +18,24 @@ bun add @byearlybird/cloud-client
 ## Quick Start
 
 ```typescript
-import { createClient, createAuthStore } from '@byearlybird/cloud-client'
+import { createClient, createAuthStore, createKeyStore } from '@byearlybird/cloud-client'
 
 // Create RPC client with full type safety
 const client = createClient('http://localhost:3000')
 
-// Create auth store
-const auth = createAuthStore(client)
+// Create key + auth stores
+const keyStore = createKeyStore()
+const auth = createAuthStore(client, keyStore)
 
 // Sign up a new user
 await auth.signUp(
   'user@example.com',
-  'securePassword123',
-  'encrypted-master-key'
+  'securePassword123'
 )
+
+// Show/backup the vault key for new-device access
+const vaultKey = keyStore.getVaultKey()
+console.log('Save this vault key:', vaultKey)
 
 // Access current state
 console.log(auth.store.state.user)
@@ -68,12 +72,13 @@ const response = await client.auth.signup.$post({
 })
 ```
 
-### `createAuthStore(client: Client)`
+### `createAuthStore(client: Client, keyStore: KeyStore)`
 
 Creates an auth store with state management and auth methods.
 
 **Parameters**:
 - `client` - The RPC client instance
+- `keyStore` - Key store for vault/master key management
 
 **Returns**: Auth store instance with the following:
 
@@ -96,24 +101,43 @@ Creates an auth store with state management and auth methods.
 
 #### Methods
 
-##### `signUp(email, password, encryptedMasterKey)`
+##### `signUp(email, password)`
 
 Sign up a new user.
 
 ```typescript
 await auth.signUp(
   'user@example.com',
-  'password123',
-  'encrypted-master-key'
+  'password123'
 )
 ```
 
 ##### `signIn(email, password)`
 
-Sign in an existing user.
+Sign in an existing user. If a vault key is stored locally, the vault will auto-unlock.
+Otherwise, the vault stays locked until the user provides their vault key when accessing encrypted data.
 
 ```typescript
 await auth.signIn('user@example.com', 'password123')
+```
+
+##### `unlockVault(vaultKey)`
+
+Unlock the vault to access encrypted data. Required on new devices where no vault key is stored locally.
+
+```typescript
+await auth.unlockVault('your-vault-key')
+```
+
+##### `isVaultUnlocked()`
+
+Check whether encrypted data is currently accessible.
+
+```typescript
+if (!auth.isVaultUnlocked()) {
+  // prompt for vault key, then:
+  await auth.unlockVault(vaultKey)
+}
 ```
 
 ##### `refresh()`
@@ -145,7 +169,8 @@ const token = auth.getAccessToken()
 ### Vanilla JavaScript
 
 ```typescript
-const auth = createAuthStore(client)
+const keyStore = createKeyStore()
+const auth = createAuthStore(client, keyStore)
 
 // Subscribe to changes
 auth.store.subscribe(() => {

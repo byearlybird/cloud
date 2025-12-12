@@ -171,9 +171,11 @@ export const createAuthStore = (client: Client, keyStore: KeyStore) => {
 
 	/**
 	 * Sign in an existing user
-	 * Requires vaultKey to decrypt the masterKey via keyStore
+	 * Password-only sign-in. If a vaultKey is already stored locally,
+	 * this will auto-unlock the vault; otherwise the vault remains locked
+	 * until the user provides their vaultKey when accessing encrypted data.
 	 */
-	const signIn = async (email: string, password: string, vaultKey: string) => {
+	const signIn = async (email: string, password: string) => {
 		store.setState((s) => ({ ...s, isLoading: true, error: null }));
 
 		try {
@@ -198,11 +200,20 @@ export const createAuthStore = (client: Client, keyStore: KeyStore) => {
 					refreshToken: string;
 				};
 
-				// Unlock vault via keyStore
-				await keyStore.unlockVault(
-					responseData.user.encryptedMasterKey,
-					vaultKey,
-				);
+				// Auto-unlock vault if we already have a stored vaultKey
+				const storedVaultKey = keyStore.getVaultKey();
+				if (storedVaultKey) {
+					try {
+						await keyStore.unlockVault(
+							responseData.user.encryptedMasterKey,
+							storedVaultKey,
+						);
+					} catch (unlockError) {
+						// Do not fail auth if vault unlock fails; clear local keys instead.
+						console.warn("Failed to auto-unlock vault:", unlockError);
+						keyStore.clear();
+					}
+				}
 
 				store.setState({
 					user: responseData.user,
@@ -314,6 +325,40 @@ export const createAuthStore = (client: Client, keyStore: KeyStore) => {
 	 */
 	const getAccessToken = () => store.state.accessToken;
 
+	/**
+	 * Unlock the vault using a user-provided vaultKey.
+	 * This is required to access encrypted documents on new devices.
+	 */
+	const unlockVault = async (vaultKey: string) => {
+		if (keyStore.isUnlocked()) {
+			throw new Error("Vault is already unlocked");
+		}
+		const encryptedMasterKey = store.state.user?.encryptedMasterKey;
+		if (!encryptedMasterKey) {
+			throw new Error("No encrypted master key available");
+		}
+
+		store.setState((s) => ({ ...s, isLoading: true, error: null }));
+		try {
+			await keyStore.unlockVault(encryptedMasterKey, vaultKey);
+			store.setState((s) => ({ ...s, isLoading: false, error: null }));
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : "Vault unlock failed";
+			store.setState((s) => ({
+				...s,
+				isLoading: false,
+				error: errorMessage,
+			}));
+			throw error;
+		}
+	};
+
+	/**
+	 * Check if the vault is currently unlocked.
+	 */
+	const isVaultUnlocked = () => keyStore.isUnlocked();
+
 	return {
 		store,
 		load,
@@ -322,6 +367,8 @@ export const createAuthStore = (client: Client, keyStore: KeyStore) => {
 		refresh,
 		signOut,
 		getAccessToken,
+		unlockVault,
+		isVaultUnlocked,
 	};
 };
 
