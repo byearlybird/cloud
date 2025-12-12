@@ -2,59 +2,52 @@ import { and, eq } from "drizzle-orm";
 
 import type { Database } from "@/db";
 import { documents } from "@/db/schema";
-import { Result } from "@/shared/result";
 import type { AnyJsonDoc } from "@/shared/types";
 
 export type DocumentRepo = {
-	get: (userId: string, key: string) => Promise<Result<AnyJsonDoc | null>>;
+	get: (userId: string, key: string) => Promise<AnyJsonDoc | null>;
 	insert: (
 		userId: string,
 		key: string,
 		doc: AnyJsonDoc,
-	) => Promise<Result<void>>;
+	) => Promise<void>;
 	update: (
 		userId: string,
 		key: string,
 		doc: AnyJsonDoc,
-	) => Promise<Result<void>>;
+	) => Promise<void>;
 };
 
 export function createDocumentRepo(db: Database): DocumentRepo {
 	return {
-		get(userId, key) {
-			return Result.wrapAsync(async () => {
-				const doc = await db
-					.select()
-					.from(documents)
-					.where(
-						and(eq(documents.userId, userId), eq(documents.documentKey, key)),
-					)
-					.limit(1)
-					.then((r) => r.at(0));
+		async get(userId, key) {
+			const doc = await db
+				.select()
+				.from(documents)
+				.where(
+					and(eq(documents.userId, userId), eq(documents.documentKey, key)),
+				)
+				.limit(1)
+				.then((r) => r.at(0));
 
-				return doc?.documentData ?? null;
+			return doc?.documentData ?? null;
+		},
+
+		async insert(userId, key, doc) {
+			await db.insert(documents).values({
+				userId,
+				documentKey: key,
+				documentData: doc,
 			});
 		},
 
-		insert(userId, key, doc) {
-			return Result.wrapAsync(async () => {
-				await db.insert(documents).values({
-					userId,
-					documentKey: key,
-					documentData: doc,
-				});
-			});
-		},
-
-		update(userId, key, doc) {
-			return Result.wrapAsync(async () => {
-				await db
-					.update(documents)
-					.set({ documentData: doc })
-					.where(
-						and(eq(documents.userId, userId), eq(documents.documentKey, key)),
-					);
-			});
+		async update(userId, key, doc) {
+			await db
+				.update(documents)
+				.set({ documentData: doc })
+				.where(
+					and(eq(documents.userId, userId), eq(documents.documentKey, key)),
+				);
 		},
 	};
 }
