@@ -1,6 +1,5 @@
 import { sign, verify } from "hono/jwt";
 
-import { Result } from "@/shared/result";
 import {
 	type AccessToken,
 	accessTokenSchema,
@@ -44,21 +43,17 @@ export async function generateRefreshToken(
 export async function verifyAccessToken(
 	token: string,
 	secret: string,
-): Promise<Result<AccessToken>> {
-	return Result.wrapAsync(async () => {
-		const payload = await verify(token, secret, "HS256");
-		return accessTokenSchema.parse(payload);
-	});
+): Promise<AccessToken> {
+	const payload = await verify(token, secret, "HS256");
+	return accessTokenSchema.parse(payload);
 }
 
 export async function verifyRefreshToken(
 	token: string,
 	secret: string,
-): Promise<Result<RefreshToken>> {
-	return Result.wrapAsync(async () => {
-		const payload = await verify(token, secret, "HS256");
-		return refreshTokenSchema.parse(payload);
-	});
+): Promise<RefreshToken> {
+	const payload = await verify(token, secret, "HS256");
+	return refreshTokenSchema.parse(payload);
 }
 
 /**

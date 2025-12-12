@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
 import type { RefreshTokenRow } from "@/db/schema";
-import { Result } from "@/shared/result";
 
 import { hashToken } from "./token.domain";
 import type { TokenRepo } from "./token.repo";
@@ -34,7 +33,7 @@ describe("token.service", () => {
 		const repo: TokenRepo = {
 			async create(userId, tokenHash) {
 				calls.push({ userId, tokenHash });
-				return Result.ok(buildRow({ userId, tokenHash }));
+				return buildRow({ userId, tokenHash });
 			},
 			async getByHash() {
 				throw new Error("getByHash should not run");
@@ -49,8 +48,7 @@ describe("token.service", () => {
 
 		const service = createTokenService(repo, config);
 		const userId = crypto.randomUUID();
-		const result = await service.issueTokens(userId, "user@example.com");
-		const value = Result.unwrap(result);
+		const value = await service.issueTokens(userId, "user@example.com");
 
 		expect(value.accessToken.length).toBeGreaterThan(0);
 		expect(value.refreshToken.length).toBeGreaterThan(0);
@@ -68,19 +66,19 @@ describe("token.service", () => {
 			async create(userId, tokenHash) {
 				const row = buildRow({ userId, tokenHash });
 				storedRows.set(tokenHash, row);
-				return Result.ok(row);
+				return row;
 			},
 			async getByHash(tokenHash) {
-				return Result.ok(storedRows.get(tokenHash) ?? null);
+				return storedRows.get(tokenHash) ?? null;
 			},
 			async updateLastUsed(id) {
 				for (const row of storedRows.values()) {
 					if (row.id === id) {
 						updateCount += 1;
-						return Result.ok<void>(undefined);
+						return;
 					}
 				}
-				return Result.err(new Error("token missing"));
+				throw new Error("token missing");
 			},
 			async revoke(tokenHash) {
 				const row = storedRows.get(tokenHash);
@@ -90,17 +88,14 @@ describe("token.service", () => {
 						revokedAt: new Date().toISOString(),
 					});
 				}
-				return Result.ok<void>(undefined);
 			},
 		};
 
 		const service = createTokenService(repo, config);
 		const userId = crypto.randomUUID();
-		const issueResult = await service.issueTokens(userId, "user@example.com");
-		const issueValue = Result.unwrap(issueResult);
+		const issueValue = await service.issueTokens(userId, "user@example.com");
 
-		const refreshResult = await service.refresh(issueValue.refreshToken);
-		const refreshValue = Result.unwrap(refreshResult);
+		const refreshValue = await service.refresh(issueValue.refreshToken);
 
 		expect(refreshValue.accessToken.length).toBeGreaterThan(0);
 		expect(updateCount).toBe(1);
@@ -110,24 +105,22 @@ describe("token.service", () => {
 		const revokedHashes: string[] = [];
 		const repo: TokenRepo = {
 			async create(userId, tokenHash) {
-				return Result.ok(buildRow({ userId, tokenHash }));
+				return buildRow({ userId, tokenHash });
 			},
 			async getByHash() {
-				return Result.ok(null);
+				return null;
 			},
 			async updateLastUsed() {
-				return Result.ok<void>(undefined);
+				return;
 			},
 			async revoke(tokenHash) {
 				revokedHashes.push(tokenHash);
-				return Result.ok<void>(undefined);
 			},
 		};
 
 		const service = createTokenService(repo, config);
 		const userId = crypto.randomUUID();
-		const issueResult = await service.issueTokens(userId, "user@example.com");
-		const issueValue = Result.unwrap(issueResult);
+		const issueValue = await service.issueTokens(userId, "user@example.com");
 
 		await service.revoke(issueValue.refreshToken);
 

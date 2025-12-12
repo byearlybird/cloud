@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { User } from "@/db/schema";
-import { Result } from "@/shared/result";
+import { ConflictError, UnauthorizedError } from "@/shared/errors";
 
 import type { TokenService } from "../token/token.service";
 import type { UserRepo } from "../user/user.repo";
@@ -26,29 +26,27 @@ describe("auth.service", () => {
 
 		const userRepo: UserRepo = {
 			async getByEmail() {
-				return Result.ok<User | null>(null);
+				return null;
 			},
 			async create(email, hashedPassword, encryptedMasterKey) {
 				savedHashedPassword = hashedPassword;
-				return Result.ok(
-					buildUser({ email, hashedPassword, encryptedMasterKey }),
-				);
+				return buildUser({ email, hashedPassword, encryptedMasterKey });
 			},
 		};
 
 		const tokenService: TokenService = {
 			async issueTokens(userId, email) {
 				issuedTokensFor = { userId, email };
-				return Result.ok({
+				return {
 					accessToken: "access-token",
 					refreshToken: "refresh-token",
-				});
+				};
 			},
 			async refresh() {
-				return Result.err(new Error("not implemented"));
+				throw new Error("not implemented");
 			},
 			async revoke() {
-				return Result.err(new Error("not implemented"));
+				throw new Error("not implemented");
 			},
 		};
 
@@ -59,8 +57,7 @@ describe("auth.service", () => {
 			encryptedMasterKey: "master-key",
 		};
 
-		const result = await service.signUp(dto);
-		const value = Result.unwrap(result);
+		const value = await service.signUp(dto);
 
 		expect(value.user.email).toBe(dto.email);
 		expect("hashedPassword" in (value.user as Record<string, unknown>)).toBe(
@@ -80,7 +77,7 @@ describe("auth.service", () => {
 		const existingUser = buildUser();
 		const userRepo: UserRepo = {
 			async getByEmail() {
-				return Result.ok<User | null>(existingUser);
+				return existingUser;
 			},
 			async create() {
 				throw new Error("create should not be called");
@@ -92,10 +89,10 @@ describe("auth.service", () => {
 				throw new Error("issueTokens should not be called");
 			},
 			async refresh() {
-				return Result.err(new Error("not implemented"));
+				throw new Error("not implemented");
 			},
 			async revoke() {
-				return Result.err(new Error("not implemented"));
+				throw new Error("not implemented");
 			},
 		};
 
@@ -106,12 +103,7 @@ describe("auth.service", () => {
 			encryptedMasterKey: "master-key",
 		};
 
-		const result = await service.signUp(dto);
-
-		expect(result.ok).toBe(false);
-		if (result.ok) throw new Error("Expected result to be error");
-		expect(result.error).toBeInstanceOf(Error);
-		expect(result.error.message).toBe("User already exists");
+		await expect(service.signUp(dto)).rejects.toThrow(ConflictError);
 	});
 
 	test("signIn verifies the password and issues tokens", async () => {
@@ -122,7 +114,7 @@ describe("auth.service", () => {
 
 		const userRepo: UserRepo = {
 			async getByEmail() {
-				return Result.ok<User | null>(existingUser);
+				return existingUser;
 			},
 			async create() {
 				throw new Error("create should not be called");
@@ -134,25 +126,24 @@ describe("auth.service", () => {
 				issueCount += 1;
 				expect(userId).toBe(existingUser.id);
 				expect(email).toBe(existingUser.email);
-				return Result.ok({
+				return {
 					accessToken: "issued-access",
 					refreshToken: "issued-refresh",
-				});
+				};
 			},
 			async refresh() {
-				return Result.err(new Error("not implemented"));
+				throw new Error("not implemented");
 			},
 			async revoke() {
-				return Result.err(new Error("not implemented"));
+				throw new Error("not implemented");
 			},
 		};
 
 		const service = createAuthService(userRepo, tokenService);
-		const result = await service.signIn({
+		const value = await service.signIn({
 			email: existingUser.email,
 			password,
 		});
-		const value = Result.unwrap(result);
 
 		expect(value.accessToken).toBe("issued-access");
 		expect(value.refreshToken).toBe("issued-refresh");
@@ -169,7 +160,7 @@ describe("auth.service", () => {
 
 		const userRepo: UserRepo = {
 			async getByEmail() {
-				return Result.ok<User | null>(existingUser);
+				return existingUser;
 			},
 			async create() {
 				throw new Error("create should not be called");
@@ -179,29 +170,27 @@ describe("auth.service", () => {
 		const tokenService: TokenService = {
 			async issueTokens() {
 				issueCount += 1;
-				return Result.ok({
+				return {
 					accessToken: "access",
 					refreshToken: "refresh",
-				});
+				};
 			},
 			async refresh() {
-				return Result.err(new Error("not implemented"));
+				throw new Error("not implemented");
 			},
 			async revoke() {
-				return Result.err(new Error("not implemented"));
+				throw new Error("not implemented");
 			},
 		};
 
 		const service = createAuthService(userRepo, tokenService);
-		const result = await service.signIn({
-			email: existingUser.email,
-			password: "wrong-password",
-		});
 
-		expect(result.ok).toBe(false);
-		if (result.ok) throw new Error("Expected result to be error");
-		expect(result.error).toBeInstanceOf(Error);
-		expect(result.error.message).toBe("Invalid credentials");
+		await expect(
+			service.signIn({
+				email: existingUser.email,
+				password: "wrong-password",
+			}),
+		).rejects.toThrow(UnauthorizedError);
 		expect(issueCount).toBe(0);
 	});
 });

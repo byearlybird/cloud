@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 
-import { Result } from "@/shared/result";
 import type { AnyJsonDoc } from "@/shared/types";
 
 import { mergeDocument } from "./document.domain";
@@ -37,7 +36,7 @@ describe("document.service", () => {
 			async get(requestedUserId, key) {
 				expect(requestedUserId).toBe(userId);
 				expect(key).toBe(documentKey);
-				return Result.ok<AnyJsonDoc | null>(storedDoc);
+				return storedDoc;
 			},
 			async insert() {
 				throw new Error("insert should not be called");
@@ -48,8 +47,7 @@ describe("document.service", () => {
 		};
 
 		const service = createDocumentService(repo);
-		const result = await service.get(userId, { key: documentKey });
-		const value = Result.unwrap(result);
+		const value = await service.get(userId, { key: documentKey });
 
 		expect(value).toBe(storedDoc);
 	});
@@ -66,12 +64,11 @@ describe("document.service", () => {
 
 		const repo: DocumentRepo = {
 			async get() {
-				return Result.ok<AnyJsonDoc | null>(existingDoc);
+				return existingDoc;
 			},
 			async update(_, key, doc) {
 				expect(key).toBe(documentKey);
 				updatedDoc = doc;
-				return Result.ok<void>(undefined);
 			},
 			async insert() {
 				throw new Error("insert should not run");
@@ -79,11 +76,10 @@ describe("document.service", () => {
 		};
 
 		const service = createDocumentService(repo);
-		const result = await service.merge(userId, {
+		await service.merge(userId, {
 			key: documentKey,
 			doc: incomingDoc,
 		});
-		Result.unwrap(result);
 
 		expect(updatedDoc).not.toBeNull();
 		expect(updatedDoc as unknown as AnyJsonDoc).toEqual(expectedMerged);
@@ -95,7 +91,7 @@ describe("document.service", () => {
 
 		const repo: DocumentRepo = {
 			async get() {
-				return Result.ok<AnyJsonDoc | null>(null);
+				return null;
 			},
 			async update() {
 				throw new Error("update should not run");
@@ -103,16 +99,14 @@ describe("document.service", () => {
 			async insert(_, key, doc) {
 				expect(key).toBe(documentKey);
 				insertedDoc = doc;
-				return Result.ok<void>(undefined);
 			},
 		};
 
 		const service = createDocumentService(repo);
-		const result = await service.merge(userId, {
+		await service.merge(userId, {
 			key: documentKey,
 			doc: incomingDoc,
 		});
-		Result.unwrap(result);
 
 		expect(insertedDoc).not.toBeNull();
 		expect(insertedDoc as unknown as AnyJsonDoc).toEqual(incomingDoc);

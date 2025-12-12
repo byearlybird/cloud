@@ -3,7 +3,6 @@ import type { JwtVariables } from "hono/jwt";
 import { validator } from "hono/validator";
 import { accessTokenSchema } from "@/modules/token/token.schema";
 import {
-	InternalServerError,
 	NotFoundError,
 	UnauthorizedError,
 	ValidationError,
@@ -29,16 +28,11 @@ export function createDocumentRoutes(
 
 			const doc = await docService.get(token.data.sub, { key });
 
-			if (!doc.ok) {
-				console.error("Failed to get document:", doc.error);
-				throw new InternalServerError("Failed to retrieve document");
-			}
-
-			if (!doc.value) {
+			if (!doc) {
 				throw new NotFoundError("Document not found");
 			}
 
-			return okResponse(c, doc.value);
+			return okResponse(c, doc);
 		})
 		.patch(
 			"/:key",
@@ -59,14 +53,7 @@ export function createDocumentRoutes(
 				}
 
 				const data = c.req.valid("json");
-
-				const result = await docService.merge(token.data.sub, data);
-
-				if (!result.ok) {
-					console.error("Failed to merge document:", result.error);
-					throw new InternalServerError("Failed to merge document");
-				}
-
+				await docService.merge(token.data.sub, data);
 				return noContentResponse(c);
 			},
 		);

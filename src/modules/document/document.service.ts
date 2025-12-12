@@ -1,4 +1,3 @@
-import type { Result } from "@/shared/result";
 import type { AnyJsonDoc } from "@/shared/types";
 
 import { mergeDocument } from "./document.domain";
@@ -6,8 +5,8 @@ import type { DocumentRepo } from "./document.repo";
 import type { GetDocDTO, MergeDocDTO } from "./document.schema";
 
 export type DocumentService = {
-	get: (userId: string, dto: GetDocDTO) => Promise<Result<AnyJsonDoc | null>>;
-	merge: (userId: string, dto: MergeDocDTO) => Promise<Result<void>>;
+	get: (userId: string, dto: GetDocDTO) => Promise<AnyJsonDoc | null>;
+	merge: (userId: string, dto: MergeDocDTO) => Promise<void>;
 };
 
 export function createDocumentService(repo: DocumentRepo): DocumentService {
@@ -19,16 +18,12 @@ export function createDocumentService(repo: DocumentRepo): DocumentService {
 		async merge(userId, dto) {
 			const current = await repo.get(userId, dto.key);
 
-			if (!current.ok) {
-				return current;
+			if (current) {
+				const merged = mergeDocument(current, dto.doc);
+				await repo.update(userId, dto.key, merged);
+			} else {
+				await repo.insert(userId, dto.key, dto.doc);
 			}
-
-			if (current.value) {
-				const merged = mergeDocument(current.value, dto.doc);
-				return repo.update(userId, dto.key, merged);
-			}
-
-			return repo.insert(userId, dto.key, dto.doc);
 		},
 	};
 }
