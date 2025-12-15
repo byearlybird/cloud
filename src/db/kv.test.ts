@@ -257,4 +257,168 @@ describe("KV Store", () => {
       expect(afterDelete.value).toBeNull();
     });
   });
+
+  describe("transactions", () => {
+    test("should commit transaction on success", async () => {
+      const result = await kv.transaction(async (tx) => {
+        await tx.set(["users", "alice"], { balance: 100 });
+        await tx.set(["users", "bob"], { balance: 50 });
+        return "success";
+      });
+
+      expect(result).toBe("success");
+
+      const alice = await kv.get(["users", "alice"]);
+      const bob = await kv.get(["users", "bob"]);
+      expect(alice.value).toEqual({ balance: 100 });
+      expect(bob.value).toEqual({ balance: 50 });
+    });
+
+    test("should rollback transaction on error", async () => {
+      await kv.set(["counter"], 0);
+
+      try {
+        await kv.transaction(async (tx) => {
+          await tx.set(["counter"], 10);
+          await tx.set(["users", "alice"], { balance: 100 });
+          throw new Error("Something went wrong");
+        });
+      } catch (error: any) {
+        expect(error.message).toBe("Something went wrong");
+      }
+
+      // Changes should be rolled back
+      const counter = await kv.get(["counter"]);
+      const alice = await kv.get(["users", "alice"]);
+      expect(counter.value).toBe(0);
+      expect(alice.value).toBeNull();
+    });
+
+    test("should support reading within transaction", async () => {
+      await kv.set(["account", "balance"], 100);
+
+      await kv.transaction(async (tx) => {
+        const current = await tx.get<number>(["account", "balance"]);
+        await tx.set(["account", "balance"], (current.value || 0) + 50);
+      });
+
+      const result = await kv.get(["account", "balance"]);
+      expect(result.value).toBe(150);
+    });
+
+    test("should support delete within transaction", async () => {
+      await kv.set(["temp", "data"], "value");
+
+      await kv.transaction(async (tx) => {
+        await tx.set(["new", "data"], "new");
+        await tx.delete(["temp", "data"]);
+      });
+
+      const temp = await kv.get(["temp", "data"]);
+      const newData = await kv.get(["new", "data"]);
+      expect(temp.value).toBeNull();
+      expect(newData.value).toBe("new");
+    });
+
+    test("should support list within transaction", async () => {
+      await kv.set(["items", "1"], { id: 1 });
+      await kv.set(["items", "2"], { id: 2 });
+
+      const ids = await kv.transaction(async (tx) => {
+        const items = [];
+        for await (const entry of tx.list({ prefix: ["items"] })) {
+          items.push(entry.value);
+        }
+        return items;
+      });
+
+      expect(ids).toHaveLength(2);
+      expect(ids[0]).toEqual({ id: 1 });
+      expect(ids[1]).toEqual({ id: 2 });
+    });
+
+    test("should support getMany within transaction", async () => {
+      await kv.set(["a"], 1);
+      await kv.set(["b"], 2);
+
+      await kv.transaction(async (tx) => {
+        const results = await tx.getMany([["a"], ["b"]]);
+        const sum = (results[0].value as number) + (results[1].value as number);
+        await tx.set(["sum"], sum);
+      });
+
+      const result = await kv.get(["sum"]);
+      expect(result.value).toBe(3);
+    });
+
+    test("should isolate transaction failures", async () => {
+      await kv.set(["shared"], "initial");
+
+      // First transaction succeeds
+      await kv.transaction(async (tx) => {
+        await tx.set(["shared"], "tx1");
+      });
+
+      // Second transaction fails
+      try {
+        await kv.transaction(async (tx) => {
+          await tx.set(["shared"], "tx2");
+          throw new Error("fail");
+        });
+      } catch {
+        // Expected
+      }
+
+      // Only first transaction should be committed
+      const result = await kv.get(["shared"]);
+      expect(result.value).toBe("tx1");
+    });
+
+    test("should throw error if trying to close within transaction", async () => {
+      await expect(
+        kv.transaction(async (tx) => {
+          tx.close();
+        })
+      ).rejects.toThrow("Cannot close database within a transaction");
+    });
+
+    test("should support nested transactions (savepoints)", async () => {
+      await kv.set(["counter"], 0);
+
+      await kv.transaction(async (tx1) => {
+        await tx1.set(["counter"], 10);
+
+        await tx1.transaction(async (tx2) => {
+          await tx2.set(["counter"], 20);
+        });
+
+        const result = await tx1.get(["counter"]);
+        expect(result.value).toBe(20);
+      });
+
+      const finalResult = await kv.get(["counter"]);
+      expect(finalResult.value).toBe(20);
+    });
+
+    test("should rollback nested transaction on error", async () => {
+      await kv.set(["counter"], 0);
+
+      try {
+        await kv.transaction(async (tx1) => {
+          await tx1.set(["counter"], 10);
+
+          await tx1.transaction(async (tx2) => {
+            await tx2.set(["counter"], 20);
+            throw new Error("inner error");
+          });
+        });
+      } catch (error: any) {
+        expect(error.message).toBe("inner error");
+      }
+
+      // Entire transaction should be rolled back
+      const result = await kv.get(["counter"]);
+      expect(result.value).toBe(0);
+    });
+  });
 });

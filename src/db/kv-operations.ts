@@ -1,5 +1,6 @@
 import type { Database } from "bun:sqlite";
 import type {
+  KV,
   KvKey,
   KvEntryMaybe,
   KvEntry,
@@ -158,4 +159,56 @@ function createAsyncIterator<T>(
   };
 
   return iterator;
+}
+
+// Track transaction depth to support nested transactions with SAVEPOINTs
+let transactionDepth = 0;
+
+export async function transaction<T>(
+  db: Database,
+  fn: (tx: KV) => Promise<T>,
+): Promise<T> {
+  const depth = transactionDepth++;
+  const savepointName = `sp_${depth}`;
+  const isTopLevel = depth === 0;
+
+  try {
+    if (isTopLevel) {
+      db.run("BEGIN");
+    } else {
+      db.run(`SAVEPOINT ${savepointName}`);
+    }
+
+    // Create a transaction-scoped KV interface using the same database
+    const tx: KV = {
+      get: (key) => get(db, key),
+      getMany: (keys) => getMany(db, keys),
+      set: (key, value) => set(db, key, value),
+      delete: (key) => del(db, key),
+      list: (selector, options) => list(db, selector, options),
+      transaction: (innerFn) => transaction(db, innerFn),
+      close: () => {
+        throw new Error("Cannot close database within a transaction");
+      },
+    };
+
+    const result = await fn(tx);
+
+    if (isTopLevel) {
+      db.run("COMMIT");
+    } else {
+      db.run(`RELEASE ${savepointName}`);
+    }
+
+    return result;
+  } catch (error) {
+    if (isTopLevel) {
+      db.run("ROLLBACK");
+    } else {
+      db.run(`ROLLBACK TO ${savepointName}`);
+    }
+    throw error;
+  } finally {
+    transactionDepth--;
+  }
 }

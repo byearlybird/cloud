@@ -36,5 +36,6 @@ export interface KV {
     selector: KvListSelector,
     options?: KvListOptions,
   ): KvListIterator<T>;
+  transaction<T>(fn: (tx: KV) => Promise<T>): Promise<T>;
   close(): void;
 }

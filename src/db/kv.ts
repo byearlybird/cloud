@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import type { KV } from "./kv-types";
 import { initializeSchema } from "./kv-schema";
-import { get, getMany, set, del, list } from "./kv-operations";
+import { get, getMany, set, del, list, transaction } from "./kv-operations";
 
 export * from "./kv-types";
 
@@ -19,6 +19,7 @@ export function createKV(pathOrDb?: string | Database): KV {
     set: (key, value) => set(db, key, value),
     delete: (key) => del(db, key),
     list: (selector, options) => list(db, selector, options),
+    transaction: (fn) => transaction(db, fn),
     close: () => db.close(),
   };
 }
