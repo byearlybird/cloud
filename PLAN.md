@@ -38,11 +38,8 @@ type KvKey = readonly (string | number | boolean)[];
 ```sql
 CREATE TABLE kv (
   key TEXT PRIMARY KEY,      -- Serialized key array
-  value TEXT NOT NULL,       -- JSON-serialized value
-  expires_at INTEGER         -- Unix timestamp in ms (nullable)
+  value TEXT NOT NULL        -- JSON-serialized value
 );
-
-CREATE INDEX idx_kv_expires ON kv(expires_at) WHERE expires_at IS NOT NULL;
 ```
 
 **Key serialization strategy:**
@@ -80,7 +77,7 @@ export interface KV {
   getMany<T extends readonly unknown[]>(
     keys: readonly [...{ [K in keyof T]: KvKey }]
   ): Promise<{ [K in keyof T]: KvEntryMaybe<T[K]> }>;
-  set(key: KvKey, value: unknown, options?: { expireIn?: number }): Promise<void>;
+  set(key: KvKey, value: unknown): Promise<void>;
   delete(key: KvKey): Promise<void>;
   list<T = unknown>(selector: KvListSelector, options?: KvListOptions): KvListIterator<T>;
   close(): void;
@@ -111,7 +108,7 @@ export function createKV(pathOrDb?: string | Database): KV {
   return {
     get: (key) => get(db, key),
     getMany: (keys) => getMany(db, keys),
-    set: (key, value, options) => set(db, key, value, options),
+    set: (key, value) => set(db, key, value),
     delete: (key) => del(db, key),
     list: (selector, options) => list(db, selector, options),
     close: () => db.close(),
@@ -174,16 +171,14 @@ import { serializeKey, deserializeKey } from "./kv-serialize";
 export function get<T>(db: Database, key: KvKey): Promise<KvEntryMaybe<T>> {
   return Promise.resolve().then(() => {
     const keyStr = serializeKey(key);
-    const now = Date.now();
 
     const stmt = db.prepare(`
-      SELECT value, expires_at
+      SELECT value
       FROM kv
       WHERE key = ?
-        AND (expires_at IS NULL OR expires_at > ?)
     `);
 
-    const row = stmt.get(keyStr, now) as { value: string; expires_at: number | null } | undefined;
+    const row = stmt.get(keyStr) as { value: string } | undefined;
 
     if (!row) {
       return { key, value: null };
@@ -203,7 +198,6 @@ export function getMany<T extends readonly unknown[]>(
   keys: readonly [...{ [K in keyof T]: KvKey }]
 ): Promise<{ [K in keyof T]: KvEntryMaybe<T[K]> }> {
   return Promise.resolve().then(() => {
-    const now = Date.now();
     const keyStrs = keys.map(serializeKey);
 
     // Use IN query for batch fetch
@@ -212,10 +206,9 @@ export function getMany<T extends readonly unknown[]>(
       SELECT key, value
       FROM kv
       WHERE key IN (${placeholders})
-        AND (expires_at IS NULL OR expires_at > ?)
     `);
 
-    const rows = stmt.all(...keyStrs, now) as Array<{ key: string; value: string }>;
+    const rows = stmt.all(...keyStrs) as Array<{ key: string; value: string }>;
     const rowMap = new Map(rows.map(r => [r.key, JSON.parse(r.value)]));
 
     // Return entries in same order as input keys
@@ -234,23 +227,20 @@ export function getMany<T extends readonly unknown[]>(
 export function set(
   db: Database,
   key: KvKey,
-  value: unknown,
-  options?: { expireIn?: number }
+  value: unknown
 ): Promise<void> {
   return Promise.resolve().then(() => {
     const keyStr = serializeKey(key);
     const valueStr = JSON.stringify(value);
-    const expiresAt = options?.expireIn ? Date.now() + options.expireIn : null;
 
     const stmt = db.prepare(`
-      INSERT INTO kv (key, value, expires_at)
-      VALUES (?, ?, ?)
+      INSERT INTO kv (key, value)
+      VALUES (?, ?)
       ON CONFLICT(key) DO UPDATE SET
-        value = excluded.value,
-        expires_at = excluded.expires_at
+        value = excluded.value
     `);
 
-    stmt.run(keyStr, valueStr, expiresAt);
+    stmt.run(keyStr, valueStr);
   });
 }
 ```
@@ -280,7 +270,6 @@ export function list<T>(
   options: KvListOptions = {}
 ): KvListIterator<T> {
   const { limit, reverse } = options;
-  const now = Date.now();
 
   let query: string;
   let params: any[];
@@ -293,11 +282,10 @@ export function list<T>(
     query = `
       SELECT key, value FROM kv
       WHERE key LIKE ?
-        AND (expires_at IS NULL OR expires_at > ?)
       ORDER BY key ${reverse ? "DESC" : "ASC"}
       ${limit ? `LIMIT ?` : ""}
     `;
-    params = limit ? [pattern, now, limit] : [pattern, now];
+    params = limit ? [pattern, limit] : [pattern];
 
   } else if (selector.start && selector.end) {
     // Range query (start inclusive, end exclusive)
@@ -307,11 +295,10 @@ export function list<T>(
     query = `
       SELECT key, value FROM kv
       WHERE key >= ? AND key < ?
-        AND (expires_at IS NULL OR expires_at > ?)
       ORDER BY key ${reverse ? "DESC" : "ASC"}
       ${limit ? `LIMIT ?` : ""}
     `;
-    params = limit ? [startStr, endStr, now, limit] : [startStr, endStr, now];
+    params = limit ? [startStr, endStr, limit] : [startStr, endStr];
 
   } else {
     throw new Error("Selector must specify either 'prefix' or both 'start' and 'end'");
@@ -351,29 +338,6 @@ function createAsyncIterator<T>(
 
   return iterator;
 }
-```
-
----
-
-### Phase 4: Cleanup & Maintenance
-
-#### 4.1 Expired Key Cleanup
-
-```typescript
-// Optional: Background cleanup of expired keys
-export function cleanupExpired(db: Database): number {
-  const now = Date.now();
-  const stmt = db.prepare(`
-    DELETE FROM kv
-    WHERE expires_at IS NOT NULL
-      AND expires_at <= ?
-  `);
-
-  const result = stmt.run(now);
-  return result.changes;
-}
-
-// Can be called periodically or before queries
 ```
 
 ---
@@ -511,35 +475,6 @@ describe("KV Store", () => {
       expect(entries[1].key).toEqual(["users", "bob"]);
     });
   });
-
-  describe("expiration", () => {
-    test("should expire keys after expireIn ms", async () => {
-      await kv.set(["temp"], "value", { expireIn: 100 }); // 100ms
-
-      const result1 = await kv.get(["temp"]);
-      expect(result1.value).toBe("value");
-
-      await Bun.sleep(150); // Wait for expiration
-
-      const result2 = await kv.get(["temp"]);
-      expect(result2.value).toBeNull();
-    });
-
-    test("should not return expired keys in list", async () => {
-      await kv.set(["temp", "1"], "value", { expireIn: 100 });
-      await kv.set(["temp", "2"], "value"); // No expiration
-
-      await Bun.sleep(150);
-
-      const entries = [];
-      for await (const entry of kv.list({ prefix: ["temp"] })) {
-        entries.push(entry);
-      }
-
-      expect(entries).toHaveLength(1);
-      expect(entries[0].key).toEqual(["temp", "2"]);
-    });
-  });
 });
 ```
 
@@ -652,16 +587,16 @@ for await (const doc of kv.list({ prefix: ["documents", userId] })) {
 ✅ **Efficient queries**: Prefix and range scans
 ✅ **Type-safe**: Full TypeScript support
 ✅ **Lightweight**: No ORM, just SQLite
-✅ **Flexible**: Easy to add features (TTL, transactions, etc.)
+✅ **Persistent**: All data stored indefinitely
 
 ---
 
 ## Next Steps
 
-1. **Implement core KV layer** (Phase 1-3)
-   - Create schema and serialization
-   - Implement get/set/delete/getMany
-   - Implement list with iterators
+1. **Implement core KV layer**
+   - Create schema and serialization (Phase 1)
+   - Implement get/set/delete/getMany (Phase 2)
+   - Implement list with iterators (Phase 3)
 
 2. **Add comprehensive tests**
    - Unit tests for all operations
