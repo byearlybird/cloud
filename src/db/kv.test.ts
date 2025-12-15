@@ -382,43 +382,14 @@ describe("KV Store", () => {
       ).rejects.toThrow("Cannot close database within a transaction");
     });
 
-    test("should support nested transactions (savepoints)", async () => {
-      await kv.set(["counter"], 0);
-
-      await kv.transaction(async (tx1) => {
-        await tx1.set(["counter"], 10);
-
-        await tx1.transaction(async (tx2) => {
-          await tx2.set(["counter"], 20);
-        });
-
-        const result = await tx1.get(["counter"]);
-        expect(result.value).toBe(20);
-      });
-
-      const finalResult = await kv.get(["counter"]);
-      expect(finalResult.value).toBe(20);
-    });
-
-    test("should rollback nested transaction on error", async () => {
-      await kv.set(["counter"], 0);
-
-      try {
-        await kv.transaction(async (tx1) => {
-          await tx1.set(["counter"], 10);
-
+    test("should throw error on nested transactions", async () => {
+      await expect(
+        kv.transaction(async (tx1) => {
           await tx1.transaction(async (tx2) => {
-            await tx2.set(["counter"], 20);
-            throw new Error("inner error");
+            await tx2.set(["key"], "value");
           });
-        });
-      } catch (error: any) {
-        expect(error.message).toBe("inner error");
-      }
-
-      // Entire transaction should be rolled back
-      const result = await kv.get(["counter"]);
-      expect(result.value).toBe(0);
+        })
+      ).rejects.toThrow("Nested transactions are not supported");
     });
   });
 });

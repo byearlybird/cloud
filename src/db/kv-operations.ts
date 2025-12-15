@@ -161,24 +161,13 @@ function createAsyncIterator<T>(
   return iterator;
 }
 
-// Track transaction depth to support nested transactions with SAVEPOINTs
-let transactionDepth = 0;
-
 export async function transaction<T>(
   db: Database,
   fn: (tx: KV) => Promise<T>,
 ): Promise<T> {
-  const depth = transactionDepth++;
-  const savepointName = `sp_${depth}`;
-  const isTopLevel = depth === 0;
+  db.run("BEGIN");
 
   try {
-    if (isTopLevel) {
-      db.run("BEGIN");
-    } else {
-      db.run(`SAVEPOINT ${savepointName}`);
-    }
-
     // Create a transaction-scoped KV interface using the same database
     const tx: KV = {
       get: (key) => get(db, key),
@@ -186,29 +175,19 @@ export async function transaction<T>(
       set: (key, value) => set(db, key, value),
       delete: (key) => del(db, key),
       list: (selector, options) => list(db, selector, options),
-      transaction: (innerFn) => transaction(db, innerFn),
+      transaction: () => {
+        throw new Error("Nested transactions are not supported");
+      },
       close: () => {
         throw new Error("Cannot close database within a transaction");
       },
     };
 
     const result = await fn(tx);
-
-    if (isTopLevel) {
-      db.run("COMMIT");
-    } else {
-      db.run(`RELEASE ${savepointName}`);
-    }
-
+    db.run("COMMIT");
     return result;
   } catch (error) {
-    if (isTopLevel) {
-      db.run("ROLLBACK");
-    } else {
-      db.run(`ROLLBACK TO ${savepointName}`);
-    }
+    db.run("ROLLBACK");
     throw error;
-  } finally {
-    transactionDepth--;
   }
 }
