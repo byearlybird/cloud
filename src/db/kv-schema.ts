@@ -1,7 +1,7 @@
-import type { Database } from "bun:sqlite";
+import type { SQLiteAdapter } from "./adapters/sqlite-adapter";
 
-export function initializeSchema(db: Database): void {
-  db.run(`
+export function initializeSchema(adapter: SQLiteAdapter): void {
+  adapter.run(`
     CREATE TABLE IF NOT EXISTS kv (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL

@@ -1,4 +1,4 @@
-import type { Database } from "bun:sqlite";
+import type { SQLiteAdapter } from "./adapters/sqlite-adapter";
 import type {
   KV,
   KvKey,
@@ -10,11 +10,11 @@ import type {
 } from "./kv-types";
 import { serializeKey, deserializeKey, SEPARATOR } from "./kv-serialize";
 
-export function get<T>(db: Database, key: KvKey): Promise<KvEntryMaybe<T>> {
+export function get<T>(adapter: SQLiteAdapter, key: KvKey): Promise<KvEntryMaybe<T>> {
   return Promise.resolve().then(() => {
     const keyStr = serializeKey(key);
 
-    const stmt = db.prepare(`
+    const stmt = adapter.prepare(`
       SELECT value
       FROM kv
       WHERE key = ?
@@ -32,7 +32,7 @@ export function get<T>(db: Database, key: KvKey): Promise<KvEntryMaybe<T>> {
 }
 
 export function getMany<T extends readonly unknown[]>(
-  db: Database,
+  adapter: SQLiteAdapter,
   keys: readonly [...{ [K in keyof T]: KvKey }],
 ): Promise<{ [K in keyof T]: KvEntryMaybe<T[K]> }> {
   return Promise.resolve().then(() => {
@@ -40,7 +40,7 @@ export function getMany<T extends readonly unknown[]>(
 
     // Use IN query for batch fetch
     const placeholders = keyStrs.map(() => "?").join(",");
-    const stmt = db.prepare(`
+    const stmt = adapter.prepare(`
       SELECT key, value
       FROM kv
       WHERE key IN (${placeholders})
@@ -59,7 +59,7 @@ export function getMany<T extends readonly unknown[]>(
 }
 
 export function set(
-  db: Database,
+  adapter: SQLiteAdapter,
   key: KvKey,
   value: unknown,
 ): Promise<void> {
@@ -67,7 +67,7 @@ export function set(
     const keyStr = serializeKey(key);
     const valueStr = JSON.stringify(value);
 
-    const stmt = db.prepare(`
+    const stmt = adapter.prepare(`
       INSERT INTO kv (key, value)
       VALUES (?, ?)
       ON CONFLICT(key) DO UPDATE SET
@@ -78,16 +78,16 @@ export function set(
   });
 }
 
-export function del(db: Database, key: KvKey): Promise<void> {
+export function del(adapter: SQLiteAdapter, key: KvKey): Promise<void> {
   return Promise.resolve().then(() => {
     const keyStr = serializeKey(key);
-    const stmt = db.prepare(`DELETE FROM kv WHERE key = ?`);
+    const stmt = adapter.prepare(`DELETE FROM kv WHERE key = ?`);
     stmt.run(keyStr);
   });
 }
 
 export function list<T>(
-  db: Database,
+  adapter: SQLiteAdapter,
   selector: KvListSelector,
   options: KvListOptions = {},
 ): KvListIterator<T> {
@@ -126,7 +126,7 @@ export function list<T>(
     );
   }
 
-  const stmt = db.prepare(query);
+  const stmt = adapter.prepare(query);
   const rows = stmt.all(...params) as Array<{ key: string; value: string }>;
 
   // Create async iterator
@@ -162,19 +162,19 @@ function createAsyncIterator<T>(
 }
 
 export async function transaction<T>(
-  db: Database,
+  adapter: SQLiteAdapter,
   fn: (tx: KV) => Promise<T>,
 ): Promise<T> {
-  db.run("BEGIN");
+  adapter.run("BEGIN");
 
   try {
-    // Create a transaction-scoped KV interface using the same database
+    // Create a transaction-scoped KV interface using the same adapter
     const tx: KV = {
-      get: (key) => get(db, key),
-      getMany: (keys) => getMany(db, keys),
-      set: (key, value) => set(db, key, value),
-      delete: (key) => del(db, key),
-      list: (selector, options) => list(db, selector, options),
+      get: (key) => get(adapter, key),
+      getMany: (keys) => getMany(adapter, keys),
+      set: (key, value) => set(adapter, key, value),
+      delete: (key) => del(adapter, key),
+      list: (selector, options) => list(adapter, selector, options),
       transaction: () => {
         throw new Error("Nested transactions are not supported");
       },
@@ -184,10 +184,10 @@ export async function transaction<T>(
     };
 
     const result = await fn(tx);
-    db.run("COMMIT");
+    adapter.run("COMMIT");
     return result;
   } catch (error) {
-    db.run("ROLLBACK");
+    adapter.run("ROLLBACK");
     throw error;
   }
 }
