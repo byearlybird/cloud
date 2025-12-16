@@ -19,8 +19,11 @@ export function createAuthService(
 			// Validate input
 			const validated = signUpSchema.parse(dto);
 
+			// Normalize email to lowercase and trim whitespace
+			const normalizedEmail = validated.email.trim().toLowerCase();
+
 			// Check if user already exists
-			const existingUser = await userRepo.getByEmail(validated.email);
+			const existingUser = await userRepo.getByEmail(normalizedEmail);
 			if (existingUser) {
 				throw new ConflictError("User already exists");
 			}
@@ -30,7 +33,7 @@ export function createAuthService(
 
 			// Create user
 			const user = await userRepo.create(
-				validated.email,
+				normalizedEmail,
 				hashedPassword,
 				validated.encryptedMasterKey,
 			);
@@ -45,8 +48,11 @@ export function createAuthService(
 			// Validate input
 			const validated = signInSchema.parse(dto);
 
+			// Normalize email to lowercase and trim whitespace
+			const normalizedEmail = validated.email.trim().toLowerCase();
+
 			// Get user by email
-			const user = await userRepo.getByEmail(validated.email);
+			const user = await userRepo.getByEmail(normalizedEmail);
 
 			if (!user) {
 				throw new UnauthorizedError("Invalid credentials");

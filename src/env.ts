@@ -1,8 +1,12 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-	ACCESS_TOKEN_SECRET: z.string().min(8, "ACCESS_TOKEN_SECRET is required"),
-	REFRESH_TOKEN_SECRET: z.string().min(8, "REFRESH_TOKEN_SECRET is required"),
+	ACCESS_TOKEN_SECRET: z
+		.string()
+		.min(32, "ACCESS_TOKEN_SECRET must be at least 32 characters"),
+	REFRESH_TOKEN_SECRET: z
+		.string()
+		.min(32, "REFRESH_TOKEN_SECRET must be at least 32 characters"),
 	// Token expiry times in seconds
 	ACCESS_TOKEN_EXPIRY: z.coerce
 		.number()

@@ -69,6 +69,11 @@ export function createTokenService(
 				throw new InvalidTokenError("Token has been revoked");
 			}
 
+			// Immediately revoke the old refresh token to prevent race conditions
+			// This must happen before generating new tokens to ensure concurrent
+			// requests cannot bypass the revocation check
+			await tokenRepo.revoke(tokenHash);
+
 			// Update last used timestamp
 			await tokenRepo.updateLastUsed(tokenRecord.id);
 
@@ -91,9 +96,6 @@ export function createTokenService(
 			// Store the new refresh token
 			const newTokenHash = hashToken(newRefreshToken);
 			await tokenRepo.create(userId, newTokenHash);
-
-			// Revoke the old refresh token
-			await tokenRepo.revoke(tokenHash);
 
 			return { accessToken, refreshToken: newRefreshToken };
 		},
