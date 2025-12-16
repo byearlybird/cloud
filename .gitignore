@@ -38,6 +38,3 @@ data/
 *.db
 *.db-shm
 *.db-wal
-
-# Drizzle Studio temporary files
-.drizzle-studio

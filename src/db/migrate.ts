@@ -1,16 +1,27 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { migrate as drizzleMigrate } from "drizzle-orm/bun-sqlite/migrator";
 import { env } from "../env";
-import { db } from ".";
+import { kv } from ".";
+
+function ensureDatabaseDir(databasePath: string) {
+	// Skip directory creation for in-memory db and URL-style connections.
+	if (databasePath === ":memory:") {
+		return;
+	}
+	if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(databasePath)) {
+		return;
+	}
+
+	mkdirSync(dirname(databasePath), { recursive: true });
+}
 
 export async function migrate() {
 	try {
-		mkdirSync(dirname(env.DATABASE_PATH), { recursive: true });
-		const result = await drizzleMigrate(db, { migrationsFolder: "./drizzle" });
-		if (result) {
-			console.info(result);
-		}
+		ensureDatabaseDir(env.DATABASE_PATH);
+
+		// KV schema initialization happens during `kv` creation; this call just
+		// forces initialization to complete (and fails fast on connection issues).
+		await kv.get(["__kv__", "init"]);
 	} catch (ex) {
 		console.error(ex);
 		process.exit(1);

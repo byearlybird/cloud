@@ -22,7 +22,12 @@ export function createUserRepo(kv: KV): UserRepo {
 	return {
 		async getByEmail(email) {
 			// Look up user ID by email index
-			const indexEntry = await kv.get<string>(["users", "index", "email", email]);
+			const indexEntry = await kv.get<string>([
+				"users",
+				"index",
+				"email",
+				email,
+			]);
 			if (!indexEntry.value) {
 				return null;
 			}

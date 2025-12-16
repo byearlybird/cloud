@@ -613,7 +613,7 @@ for await (const doc of kv.list({ prefix: ["documents", userId] })) {
    - TokenRepo
    - Update all services
 
-5. **Remove Drizzle dependency**
+5. **Remove legacy ORM dependency**
    - Delete schema files
    - Remove from package.json
    - Update documentation

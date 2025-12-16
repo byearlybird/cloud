@@ -11,10 +11,7 @@ export type RefreshToken = {
 };
 
 export type TokenRepo = {
-	create: (
-		userId: string,
-		tokenHash: string,
-	) => Promise<RefreshToken>;
+	create: (userId: string, tokenHash: string) => Promise<RefreshToken>;
 	getByHash: (tokenHash: string) => Promise<RefreshToken | null>;
 	updateLastUsed: (id: string) => Promise<void>;
 	revoke: (tokenHash: string) => Promise<void>;
@@ -52,13 +49,22 @@ export function createTokenRepo(kv: KV): TokenRepo {
 
 		async getByHash(tokenHash) {
 			// Look up token ID by hash index
-			const indexEntry = await kv.get<string>(["tokens", "index", "hash", tokenHash]);
+			const indexEntry = await kv.get<string>([
+				"tokens",
+				"index",
+				"hash",
+				tokenHash,
+			]);
 			if (!indexEntry.value) {
 				return null;
 			}
 
 			// Get token data by ID
-			const tokenEntry = await kv.get<RefreshToken>(["tokens", "id", indexEntry.value]);
+			const tokenEntry = await kv.get<RefreshToken>([
+				"tokens",
+				"id",
+				indexEntry.value,
+			]);
 			return tokenEntry.value;
 		},
 
@@ -78,13 +84,22 @@ export function createTokenRepo(kv: KV): TokenRepo {
 
 		async revoke(tokenHash) {
 			// Look up token ID by hash index
-			const indexEntry = await kv.get<string>(["tokens", "index", "hash", tokenHash]);
+			const indexEntry = await kv.get<string>([
+				"tokens",
+				"index",
+				"hash",
+				tokenHash,
+			]);
 			if (!indexEntry.value) {
 				return;
 			}
 
 			// Get token data
-			const tokenEntry = await kv.get<RefreshToken>(["tokens", "id", indexEntry.value]);
+			const tokenEntry = await kv.get<RefreshToken>([
+				"tokens",
+				"id",
+				indexEntry.value,
+			]);
 			if (!tokenEntry.value) {
 				return;
 			}
