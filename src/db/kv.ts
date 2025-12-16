@@ -1,49 +1,43 @@
-import { Database } from "bun:sqlite";
-import type { KV } from "./kv-types";
-import type { SQLiteAdapter } from "./adapters/sqlite-adapter";
-import { createBunAdapter } from "./adapters/bun-adapter";
+import type { Database } from "@tursodatabase/database";
+import { del, get, getMany, list, set, transaction } from "./kv-operations";
 import { initializeSchema } from "./kv-schema";
-import { get, getMany, set, del, list, transaction } from "./kv-operations";
+import type { KV } from "./kv-types";
 
 export * from "./kv-types";
-export * from "./adapters/sqlite-adapter";
-export * from "./adapters/bun-adapter";
 
 /**
- * Create a KV store instance.
+ * Create a KV store instance using an injected Turso database.
  *
- * @param pathOrDbOrAdapter - Can be:
- *   - string: Path to SQLite database file
- *   - Database: Bun SQLite database instance
- *   - SQLiteAdapter: Custom adapter implementation
- *   - undefined: Creates an in-memory database
+ * @param db - Turso Database instance
+ *
+ * @example
+ * ```ts
+ * import { connect } from "@tursodatabase/database";
+ * import { createKV } from "./kv";
+ *
+ * // In-memory database
+ * const db = await connect(":memory:");
+ * const kv = await createKV(db);
+ *
+ * // File-based database
+ * const db = await connect("./data.db");
+ * const kv = await createKV(db);
+ *
+ * // Remote Turso database
+ * const db = await connect({ url: "libsql://your-database.turso.io" });
+ * const kv = await createKV(db);
+ * ```
  */
-export function createKV(pathOrDbOrAdapter?: string | Database | SQLiteAdapter): KV {
-  let adapter: SQLiteAdapter;
+export async function createKV(db: Database): Promise<KV> {
+	await initializeSchema(db);
 
-  if (!pathOrDbOrAdapter) {
-    // Default: in-memory database
-    adapter = createBunAdapter();
-  } else if (typeof pathOrDbOrAdapter === "string") {
-    // String path: create Bun adapter with file
-    adapter = createBunAdapter(pathOrDbOrAdapter);
-  } else if (pathOrDbOrAdapter instanceof Database) {
-    // Bun Database instance: wrap in adapter
-    adapter = createBunAdapter(pathOrDbOrAdapter);
-  } else {
-    // Already an adapter: use directly
-    adapter = pathOrDbOrAdapter;
-  }
-
-  initializeSchema(adapter);
-
-  return {
-    get: (key) => get(adapter, key),
-    getMany: (keys) => getMany(adapter, keys),
-    set: (key, value) => set(adapter, key, value),
-    delete: (key) => del(adapter, key),
-    list: (selector, options) => list(adapter, selector, options),
-    transaction: (fn) => transaction(adapter, fn),
-    close: () => adapter.close(),
-  };
+	return {
+		get: (key) => get(db, key),
+		getMany: (keys) => getMany(db, keys),
+		set: (key, value) => set(db, key, value),
+		delete: (key) => del(db, key),
+		list: (selector, options) => list(db, selector, options),
+		transaction: (fn) => transaction(db, fn),
+		close: () => db.close(),
+	};
 }

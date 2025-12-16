@@ -1,7 +1,7 @@
-import type { SQLiteAdapter } from "./adapters/sqlite-adapter";
+import type { Database } from "@tursodatabase/database";
 
-export function initializeSchema(adapter: SQLiteAdapter): void {
-  adapter.run(`
+export async function initializeSchema(db: Database): Promise<void> {
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS kv (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL

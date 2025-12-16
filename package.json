@@ -29,6 +29,7 @@
 	},
 	"dependencies": {
 		"@byearlybird/starling": "^0.12.0",
+		"@tursodatabase/database": "^0.3.2",
 		"drizzle-orm": "^1.0.0-beta.2-b782ae1",
 		"hono": "^4.10.4",
 		"zod": "^4.1.12"
