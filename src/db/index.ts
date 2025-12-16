@@ -1,39 +1,45 @@
 import { Database as SQLite } from "bun:sqlite";
+import { connect } from "@tursodatabase/database";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { env } from "@/env";
+import { createKV } from "./kv";
 import * as schema from "./schema";
 
 /**
- * Database connection and Drizzle instance
- * Uses Bun's native SQLite bindings for optimal performance
+ * Database connections
+ * - Drizzle ORM for legacy tables (users, tokens)
+ * - KV store for new document storage
  */
-
-// Get database path from environment or use default
 
 // Ensure the database directory exists
 mkdirSync(dirname(env.DATABASE_PATH), { recursive: true });
 
-// Initialize SQLite database with Bun's native driver
+// Initialize Bun SQLite database for Drizzle
 const client = new SQLite(env.DATABASE_PATH, { create: true });
-
-// Enable WAL mode for better concurrency
 client.run("PRAGMA journal_mode = WAL;");
 
-// Initialize Drizzle ORM with the schema
+// Initialize Drizzle ORM with the schema (for users and tokens)
 export const db = drizzle({
 	client,
 	schema,
 	casing: "snake_case",
 });
 
+// Initialize Turso database connection for KV store
+const tursoDatabase = await connect(env.DATABASE_PATH);
+
+// Initialize KV store (for documents)
+export const kv = await createKV(tursoDatabase);
+
 /**
- * Close the database connection
+ * Close the database connections
  * Call this when shutting down the application
  */
-export function closeDatabase() {
+export async function closeDatabase() {
 	client.close();
+	await kv.close();
 }
 
 export type Database = typeof db;
