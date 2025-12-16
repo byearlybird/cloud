@@ -6,16 +6,8 @@ import type { AnyJsonDoc } from "@/shared/types";
 
 export type DocumentRepo = {
 	get: (userId: string, key: string) => Promise<AnyJsonDoc | null>;
-	insert: (
-		userId: string,
-		key: string,
-		doc: AnyJsonDoc,
-	) => Promise<void>;
-	update: (
-		userId: string,
-		key: string,
-		doc: AnyJsonDoc,
-	) => Promise<void>;
+	insert: (userId: string, key: string, doc: AnyJsonDoc) => Promise<void>;
+	update: (userId: string, key: string, doc: AnyJsonDoc) => Promise<void>;
 };
 
 export function createDocumentRepo(db: Database): DocumentRepo {

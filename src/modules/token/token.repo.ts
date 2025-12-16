@@ -3,10 +3,7 @@ import type { Database } from "@/db";
 import { type RefreshTokenRow, refreshTokens } from "@/db/schema";
 
 export type TokenRepo = {
-	create: (
-		userId: string,
-		tokenHash: string,
-	) => Promise<RefreshTokenRow>;
+	create: (userId: string, tokenHash: string) => Promise<RefreshTokenRow>;
 	getByHash: (tokenHash: string) => Promise<RefreshTokenRow | null>;
 	updateLastUsed: (id: string) => Promise<void>;
 	revoke: (tokenHash: string) => Promise<void>;
