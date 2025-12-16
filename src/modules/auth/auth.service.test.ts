@@ -1,10 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-import type { User } from "@/db/schema";
 import { ConflictError, UnauthorizedError } from "@/shared/errors";
 
 import type { TokenService } from "../token/token.service";
-import type { UserRepo } from "../user/user.repo";
+import type { User, UserRepo } from "../user/user.repo";
 import { createAuthService } from "./auth.service";
 
 function buildUser(overrides: Partial<User> = {}): User {

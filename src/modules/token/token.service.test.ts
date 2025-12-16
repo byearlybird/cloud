@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import type { RefreshTokenRow } from "@/db/schema";
-
 import { hashToken } from "./token.domain";
-import type { TokenRepo } from "./token.repo";
+import type { RefreshToken, TokenRepo } from "./token.repo";
 import type { TokenConfig } from "./token.schema";
 import { createTokenService } from "./token.service";
 
@@ -14,7 +12,7 @@ const config: TokenConfig = {
 	refreshTokenExpiry: 120,
 };
 
-function buildRow(overrides: Partial<RefreshTokenRow> = {}): RefreshTokenRow {
+function buildRow(overrides: Partial<RefreshToken> = {}): RefreshToken {
 	const now = new Date().toISOString();
 	return {
 		id: overrides.id ?? crypto.randomUUID(),

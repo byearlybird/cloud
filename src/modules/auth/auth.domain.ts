@@ -1,4 +1,4 @@
-import type { User } from "@/db/schema";
+import type { User } from "@/modules/user/user.repo";
 
 /**
  * Remove sensitive fields from user object before returning to client

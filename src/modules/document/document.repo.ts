@@ -1,7 +1,4 @@
-import { and, eq } from "drizzle-orm";
-
-import type { Database } from "@/db";
-import { documents } from "@/db/schema";
+import type { KV } from "@/db/kv";
 import type { AnyJsonDoc } from "@/shared/types";
 
 export type DocumentRepo = {
@@ -18,36 +15,19 @@ export type DocumentRepo = {
 	) => Promise<void>;
 };
 
-export function createDocumentRepo(db: Database): DocumentRepo {
+export function createDocumentRepo(kv: KV): DocumentRepo {
 	return {
 		async get(userId, key) {
-			const doc = await db
-				.select()
-				.from(documents)
-				.where(
-					and(eq(documents.userId, userId), eq(documents.documentKey, key)),
-				)
-				.limit(1)
-				.then((r) => r.at(0));
-
-			return doc?.documentData ?? null;
+			const entry = await kv.get<AnyJsonDoc>(["documents", userId, key]);
+			return entry.value;
 		},
 
 		async insert(userId, key, doc) {
-			await db.insert(documents).values({
-				userId,
-				documentKey: key,
-				documentData: doc,
-			});
+			await kv.set(["documents", userId, key], doc);
 		},
 
 		async update(userId, key, doc) {
-			await db
-				.update(documents)
-				.set({ documentData: doc })
-				.where(
-					and(eq(documents.userId, userId), eq(documents.documentKey, key)),
-				);
+			await kv.set(["documents", userId, key], doc);
 		},
 	};
 }

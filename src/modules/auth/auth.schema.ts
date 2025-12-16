@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { User } from "@/db/schema";
+import type { User } from "@/modules/user/user.repo";
 
 export type AuthResponse = {
 	user: Omit<User, "hashedPassword">;
