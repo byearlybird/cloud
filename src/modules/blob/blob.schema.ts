@@ -1,12 +1,12 @@
 import z from "zod";
 
 export const putBlobSchema = z.object({
-  key: z.string(),
-  doc: z.string(), // Accept string directly
+	key: z.string(),
+	doc: z.string(), // Accept string directly
 });
 
 export const getBlobSchema = z.object({
-  key: z.string(),
+	key: z.string(),
 });
 
 export type PutBlobDTO = z.infer<typeof putBlobSchema>;
