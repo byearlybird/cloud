@@ -1,11 +1,11 @@
 meta {
-  name: Get Docuement
+  name: Get Blob
   type: http
   seq: 1
 }
 
 get {
-  url: http://localhost:3000/documents/:key
+  url: http://localhost:3000/blobs/:key
   body: none
   auth: bearer
 }
@@ -22,3 +22,4 @@ settings {
   encodeUrl: true
   timeout: 0
 }
+

@@ -1,13 +1,13 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "26f068eb-dab9-4649-9f36-7d745b14b50a",
+  "id": "f3daf3bb-25ab-4d96-add3-e23c4f6e76a5",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
     {
-      "name": "documents",
+      "name": "blobs",
       "entityType": "tables"
     },
     {
@@ -26,7 +26,7 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "documents"
+      "table": "blobs"
     },
     {
       "type": "text",
@@ -36,7 +36,7 @@
       "generated": null,
       "name": "user_id",
       "entityType": "columns",
-      "table": "documents"
+      "table": "blobs"
     },
     {
       "type": "text",
@@ -44,19 +44,19 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "document_key",
+      "name": "blob_key",
       "entityType": "columns",
-      "table": "documents"
+      "table": "blobs"
     },
     {
-      "type": "text",
+      "type": "blob",
       "notNull": true,
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "document_data",
+      "name": "blob_data",
       "entityType": "columns",
-      "table": "documents"
+      "table": "blobs"
     },
     {
       "type": "text",
@@ -66,7 +66,7 @@
       "generated": null,
       "name": "created_at",
       "entityType": "columns",
-      "table": "documents"
+      "table": "blobs"
     },
     {
       "type": "text",
@@ -76,7 +76,7 @@
       "generated": null,
       "name": "updated_at",
       "entityType": "columns",
-      "table": "documents"
+      "table": "blobs"
     },
     {
       "type": "text",
@@ -219,9 +219,9 @@
       "onUpdate": "NO ACTION",
       "onDelete": "cascade",
       "nameExplicit": false,
-      "name": "fk_documents_user_id_users_id_fk",
+      "name": "fk_blobs_user_id_users_id_fk",
       "entityType": "fks",
-      "table": "documents"
+      "table": "blobs"
     },
     {
       "columns": [
@@ -243,8 +243,8 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "documents_pk",
-      "table": "documents",
+      "name": "blobs_pk",
+      "table": "blobs",
       "entityType": "pks"
     },
     {
@@ -272,16 +272,16 @@
           "isExpression": false
         },
         {
-          "value": "document_key",
+          "value": "blob_key",
           "isExpression": false
         }
       ],
       "isUnique": true,
       "where": null,
       "origin": "manual",
-      "name": "idx_documents_user_key",
+      "name": "idx_blobs_user_key",
       "entityType": "indexes",
-      "table": "documents"
+      "table": "blobs"
     },
     {
       "columns": [

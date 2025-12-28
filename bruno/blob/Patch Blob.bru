@@ -1,11 +1,11 @@
 meta {
-  name: Patch Document
+  name: Put Blob
   type: http
   seq: 2
 }
 
-patch {
-  url: http://localhost:3000/documents/:key
+put {
+  url: http://localhost:3000/blobs/:key
   body: json
   auth: bearer
 }
@@ -20,13 +20,13 @@ auth:bearer {
 
 body:json {
   {
-    "type": "document",
+    "type": "blob",
     "latest": "2025-12-07T10:30:00Z",
     "resources": {
-      "doc-123": {
-        "id": "doc-123",
+      "blob-123": {
+        "id": "blob-123",
         "attributes": {
-          "title": "My Document",
+          "title": "My Blob",
           "content": "Hello world",
           "status": "archived",
           "tags": ["example", "sample"]
@@ -42,10 +42,10 @@ body:json {
           "deletedAt": null
         }
       },
-      "doc-456": {
-        "id": "doc-456",
+      "blob-456": {
+        "id": "blob-456",
         "attributes": {
-          "title": "Another Document",
+          "title": "Another Blob",
           "author": "Jonathan Doe",
           "wordCount": 1500
         },
@@ -67,3 +67,4 @@ settings {
   encodeUrl: true
   timeout: 0
 }
+

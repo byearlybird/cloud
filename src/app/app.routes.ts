@@ -4,15 +4,15 @@ import { HTTPException } from "hono/http-exception";
 import { jwt } from "hono/jwt";
 import { env } from "@/env";
 import { createAuthRoutes } from "@/modules/auth/auth.routes";
-import { createDocumentRoutes } from "@/modules/document/document.routes";
+import { createBlobRoutes } from "@/modules/blob/blob.routes";
 import { createTokenRoutes } from "@/modules/token/token.routes";
 import { ApiError, InternalServerError } from "@/shared/errors";
-import { authService, documentService, tokenService } from "./app.services";
+import { authService, blobService, tokenService } from "./app.services";
 
 const authRoutes = createAuthRoutes(authService);
 const tokenRoutes = createTokenRoutes(tokenService);
-const documentRoutes = createDocumentRoutes(
-	documentService,
+const blobRoutes = createBlobRoutes(
+	blobService,
 	jwt({
 		secret: env.ACCESS_TOKEN_SECRET,
 	}),
@@ -33,7 +33,7 @@ export const appRoutes = new Hono()
 	})
 	.route("/auth", authRoutes)
 	.route("/tokens", tokenRoutes)
-	.route("/documents", documentRoutes)
+	.route("/blobs", blobRoutes)
 	.onError((err, c) => {
 		if (err instanceof ApiError) {
 			return err.toResponse(c);

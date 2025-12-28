@@ -1,11 +1,11 @@
-CREATE TABLE `documents` (
+CREATE TABLE `blobs` (
 	`id` text PRIMARY KEY,
 	`user_id` text NOT NULL,
-	`document_key` text NOT NULL,
-	`document_data` text NOT NULL,
+	`blob_key` text NOT NULL,
+	`blob_data` blob NOT NULL,
 	`created_at` text NOT NULL,
 	`updated_at` text NOT NULL,
-	CONSTRAINT `fk_documents_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade
+	CONSTRAINT `fk_blobs_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `refresh_tokens` (
@@ -28,7 +28,7 @@ CREATE TABLE `users` (
 	`updated_at` text NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `idx_documents_user_key` ON `documents` (`user_id`,`document_key`);--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_blobs_user_key` ON `blobs` (`user_id`,`blob_key`);--> statement-breakpoint
 CREATE UNIQUE INDEX `idx_refresh_tokens_user_hash` ON `refresh_tokens` (`user_id`,`token_hash`);--> statement-breakpoint
 CREATE INDEX `idx_refresh_tokens_user_id` ON `refresh_tokens` (`user_id`);--> statement-breakpoint
 CREATE INDEX `idx_refresh_tokens_revoked_at` ON `refresh_tokens` (`revoked_at`);

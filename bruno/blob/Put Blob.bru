@@ -1,0 +1,70 @@
+meta {
+  name: Put Blob
+  type: http
+  seq: 2
+}
+
+put {
+  url: http://localhost:3000/blobs/:key
+  body: json
+  auth: bearer
+}
+
+params:path {
+  key: demo
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0N2ZiMmM2ZC0wODM0LTQ1YzctOTExMi1kM2RjMDg1YmEyNTUiLCJlbWFpbCI6Im5pY2tAZ21haWwuY29tIiwiZXhwIjoxNzY1MzQxNDA1fQ.aKuBGxQaYENEP-yPq6J4DbULxBnSoyde8zXfxeTJxR4
+}
+
+body:json {
+  {
+    "type": "blob",
+    "latest": "2025-12-07T10:30:00Z",
+    "resources": {
+      "blob-123": {
+        "id": "blob-123",
+        "attributes": {
+          "title": "My Blob",
+          "content": "Hello world",
+          "status": "archived",
+          "tags": ["example", "sample"]
+        },
+        "meta": {
+          "eventstamps": {
+            "title": "2025-12-01T08:00:00Z",
+            "content": "2025-12-07T10:30:00Z",
+            "status": "2025-12-02T09:16:00Z",
+            "tags": "2025-12-03T11:20:00Z"
+          },
+          "latest": "2025-12-07T10:30:00Z",
+          "deletedAt": null
+        }
+      },
+      "blob-456": {
+        "id": "blob-456",
+        "attributes": {
+          "title": "Another Blob",
+          "author": "Jonathan Doe",
+          "wordCount": 1500
+        },
+        "meta": {
+          "eventstamps": {
+            "title": "2025-11-15T14:20:00Z",
+            "author": "2025-11-15T14:21:00Z",
+            "wordCount": "2025-12-05T16:45:00Z"
+          },
+          "latest": "2025-12-05T16:45:00Z",
+          "deletedAt": null
+        }
+      }
+    }
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
