@@ -6,6 +6,8 @@ export type AppEnv = {
   Bindings: Env;
 };
 
+const STORAGE_KEY = (userId: string, name: string) => `${userId}:db:${name}`;
+
 const app = new Hono<AppEnv>()
   .get("/status", (c) => {
     return c.json({ status: "ok" });
@@ -14,7 +16,7 @@ const app = new Hono<AppEnv>()
   .get("/api/db/:name", async (c) => {
     const name = c.req.param("name");
     const userId = c.get("userId");
-    const storageKey = `${userId}:db:${name}`;
+    const storageKey = STORAGE_KEY(userId, name);
     const object = await c.env.journal_bucket.get(storageKey);
 
     if (object === null) {
@@ -26,7 +28,7 @@ const app = new Hono<AppEnv>()
   .put("/api/db/:name", async (c) => {
     const name = c.req.param("name");
     const userId = c.get("userId");
-    const storageKey = `${userId}:db:${name}`;
+    const storageKey = STORAGE_KEY(userId, name);
     const arrayBuffer = await c.req.arrayBuffer();
     await c.env.journal_bucket.put(storageKey, arrayBuffer);
     return c.json({ success: true }, 200);
