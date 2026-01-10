@@ -34,4 +34,6 @@ const app = new Hono<AppEnv>()
     return c.json({ success: true }, 200);
   });
 
+export type AppType = typeof app;
+
 export default app;
