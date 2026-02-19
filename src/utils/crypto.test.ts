@@ -1,57 +1,64 @@
 import { describe, expect, it } from "bun:test";
-import { decryptWithPrivateKey, encryptWithPublicKey, generateChallenge, generateKeyPair, makeVaultAddress } from "./crypto";
+import {
+  generateChallenge,
+  generateKeyPair,
+  makeVaultAddress,
+  signChallenge,
+  verifySignature,
+} from "./crypto";
 
 describe("generateKeyPair", () => {
-  it("returns RSA JWK key pair", async () => {
+  it("returns EC P-256 JWK key pair", async () => {
     const { publicKey, privateKey } = await generateKeyPair();
-    expect(publicKey.kty).toBe("RSA");
-    expect(publicKey.n).toBeDefined();
-    expect(publicKey.e).toBeDefined();
-    expect(privateKey.kty).toBe("RSA");
-    expect(privateKey.d).toBeDefined(); // private exponent only on private key
-  });
-});
-
-describe("encryptWithPublicKey / decryptWithPrivateKey", () => {
-  it("round-trips plaintext", async () => {
-    const { publicKey, privateKey } = await generateKeyPair();
-    const plaintext = "hello world";
-    const ciphertext = await encryptWithPublicKey(publicKey, plaintext);
-    const decrypted = await decryptWithPrivateKey(privateKey, ciphertext);
-    expect(decrypted).toBe(plaintext);
-  });
-
-  it("ciphertext is a non-empty base64 string", async () => {
-    const { publicKey } = await generateKeyPair();
-    const ciphertext = await encryptWithPublicKey(publicKey, "test");
-    expect(typeof ciphertext).toBe("string");
-    expect(ciphertext.length).toBeGreaterThan(0);
+    expect(publicKey.kty).toBe("EC");
+    expect(publicKey.crv).toBe("P-256");
+    expect(publicKey.x).toBeDefined();
+    expect(publicKey.y).toBeDefined();
+    expect(privateKey.kty).toBe("EC");
+    expect(privateKey.crv).toBe("P-256");
+    expect(privateKey.d).toBeDefined();
   });
 });
 
 describe("generateChallenge", () => {
-  it("returns challengeId, challenge, and encryptedChallenge", async () => {
-    const { publicKey } = await generateKeyPair();
-    const { challengeId, challenge, encryptedChallenge } = await generateChallenge(publicKey);
+  it("returns challengeId and challenge as UUIDs", () => {
+    const { challengeId, challenge } = generateChallenge();
     expect(challengeId).toMatch(/^[0-9a-f-]{36}$/);
     expect(challenge).toMatch(/^[0-9a-f-]{36}$/);
-    expect(typeof encryptedChallenge).toBe("string");
-    expect(encryptedChallenge.length).toBeGreaterThan(0);
   });
 
-  it("encryptedChallenge decrypts back to challenge", async () => {
-    const { publicKey, privateKey } = await generateKeyPair();
-    const { challenge, encryptedChallenge } = await generateChallenge(publicKey);
-    const decrypted = await decryptWithPrivateKey(privateKey, encryptedChallenge);
-    expect(decrypted).toBe(challenge);
-  });
-
-  it("generates unique challengeId and challenge each call", async () => {
-    const { publicKey } = await generateKeyPair();
-    const a = await generateChallenge(publicKey);
-    const b = await generateChallenge(publicKey);
+  it("generates unique challengeId and challenge each call", () => {
+    const a = generateChallenge();
+    const b = generateChallenge();
     expect(a.challengeId).not.toBe(b.challengeId);
     expect(a.challenge).not.toBe(b.challenge);
+  });
+});
+
+describe("signChallenge / verifySignature", () => {
+  it("valid signature verifies successfully", async () => {
+    const { publicKey, privateKey } = await generateKeyPair();
+    const { challenge } = generateChallenge();
+    const signature = await signChallenge(privateKey, challenge);
+    const valid = await verifySignature(publicKey, challenge, signature);
+    expect(valid).toBe(true);
+  });
+
+  it("tampered challenge fails verification", async () => {
+    const { publicKey, privateKey } = await generateKeyPair();
+    const { challenge } = generateChallenge();
+    const signature = await signChallenge(privateKey, challenge);
+    const valid = await verifySignature(publicKey, challenge + "x", signature);
+    expect(valid).toBe(false);
+  });
+
+  it("wrong key pair fails verification", async () => {
+    const { privateKey } = await generateKeyPair();
+    const { publicKey: otherPublicKey } = await generateKeyPair();
+    const { challenge } = generateChallenge();
+    const signature = await signChallenge(privateKey, challenge);
+    const valid = await verifySignature(otherPublicKey, challenge, signature);
+    expect(valid).toBe(false);
   });
 });
 

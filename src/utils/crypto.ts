@@ -1,59 +1,11 @@
-/**
- * Encrypts a string using an RSA-OAEP public key.
- * The public key should be a JWK object as exported from `generateKeyPair`.
- *
- * Returns a base64-encoded ciphertext.
- */
-export async function encryptWithPublicKey(
-  publicKey: JsonWebKey,
-  plaintext: string,
-): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "jwk",
-    publicKey,
-    { name: "RSA-OAEP", hash: "SHA-256" },
-    false,
-    ["encrypt"],
-  );
-  const encoded = new TextEncoder().encode(plaintext);
-  const ciphertext = await crypto.subtle.encrypt({ name: "RSA-OAEP" }, key, encoded);
-  return btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
-}
-
-/**
- * Decrypts a base64-encoded ciphertext using an RSA-OAEP private key.
- * The private key should be a JWK object as exported from `generateKeyPair`.
- */
-export async function decryptWithPrivateKey(
-  privateKey: JsonWebKey,
-  ciphertext: string,
-): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "jwk",
-    privateKey,
-    { name: "RSA-OAEP", hash: "SHA-256" },
-    false,
-    ["decrypt"],
-  );
-  const ciphertextBytes = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0));
-  const plaintext = await crypto.subtle.decrypt({ name: "RSA-OAEP" }, key, ciphertextBytes);
-  return new TextDecoder().decode(plaintext);
-}
-
 export async function generateKeyPair(): Promise<{
   publicKey: JsonWebKey;
   privateKey: JsonWebKey;
 }> {
-  const keyPair = await crypto.subtle.generateKey(
-    {
-      name: "RSA-OAEP",
-      modulusLength: 2048,
-      publicExponent: new Uint8Array([1, 0, 1]),
-      hash: "SHA-256",
-    },
-    true,
-    ["encrypt", "decrypt"],
-  );
+  const keyPair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+    "sign",
+    "verify",
+  ]);
   const [publicKey, privateKey] = await Promise.all([
     crypto.subtle.exportKey("jwk", keyPair.publicKey),
     crypto.subtle.exportKey("jwk", keyPair.privateKey),
@@ -69,12 +21,43 @@ export async function makeVaultAddress(publicKey: JsonWebKey): Promise<string> {
     .join("");
 }
 
-export async function generateChallenge(
-  publicKey: JsonWebKey,
-): Promise<{ challengeId: string; challenge: string; encryptedChallenge: string }> {
-  const challengeId = crypto.randomUUID();
+export function generateChallenge(): { challengeId: string; challenge: string } {
+  return { challengeId: crypto.randomUUID(), challenge: crypto.randomUUID() };
+}
 
-  const challenge = crypto.randomUUID();
-  const encryptedChallenge = await encryptWithPublicKey(publicKey, challenge);
-  return { challengeId, challenge, encryptedChallenge };
+export async function signChallenge(privateKey: JsonWebKey, challenge: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "jwk",
+    privateKey,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    key,
+    new TextEncoder().encode(challenge),
+  );
+  return btoa(String.fromCharCode(...new Uint8Array(sig)));
+}
+
+export async function verifySignature(
+  publicKey: JsonWebKey,
+  challenge: string,
+  signature: string,
+): Promise<boolean> {
+  const key = await crypto.subtle.importKey(
+    "jwk",
+    publicKey,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["verify"],
+  );
+  const sigBytes = Uint8Array.from(atob(signature), (c) => c.charCodeAt(0));
+  return crypto.subtle.verify(
+    { name: "ECDSA", hash: "SHA-256" },
+    key,
+    sigBytes,
+    new TextEncoder().encode(challenge),
+  );
 }
