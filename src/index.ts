@@ -18,4 +18,7 @@ const app = new Hono()
   .route("/v0/auth", authRouter)
   .route("/v0/sync", syncRouter);
 
-Bun.serve({ fetch: app.fetch, port: Number(process.env.PORT ?? 3000) });
+const port = Number(process.env.PORT ?? 3000);
+const server = Bun.serve({ fetch: app.fetch, port });
+
+console.log(`Listening on http://localhost:${server.port}`);

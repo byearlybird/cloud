@@ -16,9 +16,7 @@ export const dataRepo = {
     await db
       .insertInto("data")
       .values({ id, type, enc_data, timestamp, address })
-      .onConflict((oc) =>
-        oc.constraint("data_address_type_unique").doUpdateSet({ enc_data, timestamp }),
-      )
+      .onConflict((oc) => oc.columns(["address", "type"]).doUpdateSet({ enc_data, timestamp }))
       .execute();
   },
 };
