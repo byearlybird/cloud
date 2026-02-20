@@ -5,9 +5,7 @@ export const Migration20260218Data: Migration = {
     await db.schema
       .createTable("data")
       .addColumn("id", "text", (col) => col.primaryKey())
-      .addColumn("vault_address", "text", (col) =>
-        col.notNull().references("vault.address")
-      )
+      .addColumn("vault_address", "text", (col) => col.notNull().references("vault.address"))
       .addColumn("type", "text", (col) => col.notNull())
       .addColumn("enc_data", "text", (col) => col.notNull())
       .addColumn("timestamp", "text", (col) => col.notNull())
