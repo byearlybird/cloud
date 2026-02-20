@@ -22,3 +22,5 @@ export const dataRepo = {
       .execute();
   },
 };
+
+export type DataRepo = typeof dataRepo;

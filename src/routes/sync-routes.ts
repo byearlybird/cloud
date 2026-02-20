@@ -2,7 +2,10 @@ import { Hono } from "hono";
 import { jwt } from "hono/jwt";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { syncService } from "../services/sync-service";
+import { SyncService } from "../services/sync-service";
+import { dataRepo } from "../repos/data-repo";
+
+const syncService = new SyncService(dataRepo);
 
 export const syncRouter = new Hono()
   .use(jwt({ secret: process.env.JWT_SECRET! }))
