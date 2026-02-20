@@ -5,10 +5,11 @@ export const Migration20260218Data: Migration = {
     await db.schema
       .createTable("data")
       .addColumn("id", "text", (col) => col.primaryKey())
+      .addColumn("address", "text", (col) => col.notNull())
       .addColumn("type", "text", (col) => col.notNull())
       .addColumn("enc_data", "text", (col) => col.notNull())
       .addColumn("timestamp", "text", (col) => col.notNull())
-      .addColumn("address", "text", (col) => col.notNull())
+      .addUniqueConstraint("data_address_type_unique", ["address", "type"])
       .execute();
   },
   async down(db: Kysely<any>) {
