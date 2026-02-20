@@ -1,7 +1,11 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
-import { authService } from "../services/auth-service";
+import { AuthService } from "../services/auth-service";
+import { vaultRepo } from "../repos/vault-repo";
+import { challengeRepo } from "../repos/challenge-repo";
+
+const authService = new AuthService(vaultRepo, challengeRepo, process.env.JWT_SECRET!);
 
 export const authRouter = new Hono()
   .post(

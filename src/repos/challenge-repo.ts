@@ -26,3 +26,5 @@ export const challengeRepo = {
     return row?.challenge;
   },
 };
+
+export type ChallengeRepo = typeof challengeRepo;

@@ -22,3 +22,5 @@ export const vaultRepo = {
     return vault;
   },
 };
+
+export type VaultRepo = typeof vaultRepo;
