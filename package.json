@@ -10,6 +10,7 @@
     "lint:fix": "oxlint --fix"
   },
   "dependencies": {
+    "@clerk/backend": "^2.32.2",
     "@hono/zod-validator": "^0.7.6",
     "@libsql/kysely-libsql": "^0.4.1",
     "hono": "^4.11.3",

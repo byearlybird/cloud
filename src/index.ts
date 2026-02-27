@@ -1,7 +1,11 @@
 import { Hono } from "hono";
 import { migrator } from "./db/migrator";
-import { authRouter } from "./routes/auth-routes";
-import { syncRouter } from "./routes/sync-routes";
+import { clerkMiddleware } from "./clerk-middleware";
+import { backupRouter } from "./backup-routes";
+
+export type AppEnv = {
+  Variables: { userId: string };
+};
 
 const migrationResult = await migrator.migrateToLatest();
 
@@ -13,10 +17,10 @@ if (migrationResult.error) {
   throw migrationResult.error;
 }
 
-const app = new Hono()
+const app = new Hono<AppEnv>()
   .get("/status", (c) => c.json({ status: "ok" }))
-  .route("/v0/auth", authRouter)
-  .route("/v0/sync", syncRouter);
+  .use(clerkMiddleware())
+  .route("/v0/backup", backupRouter);
 
 const port = Number(process.env.PORT ?? 3000);
 const server = Bun.serve({ fetch: app.fetch, port });
