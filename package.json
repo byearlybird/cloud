@@ -5,6 +5,7 @@
   "scripts": {
     "build": "NODE_ENV=production bun build src/index.ts --outdir dist --target bun",
     "dev": "bun run --hot src/index.ts",
+    "start": "bun dist/index.js",
     "format": "oxfmt",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix"
