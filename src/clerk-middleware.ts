@@ -1,33 +1,23 @@
-import { createClerkClient, type ClerkClient } from "@clerk/backend";
+import { createClerkClient } from "@clerk/backend";
 import { createMiddleware } from "hono/factory";
 import type { AppEnv } from ".";
 
-let clerkClient: ClerkClient | null = null;
-
-function getClerkClient(): ClerkClient {
-  if (!clerkClient) {
-    clerkClient = createClerkClient({
-      secretKey: process.env.CLERK_SECRET_KEY!,
-      publishableKey: process.env.CLERK_PUBLISHABLE_KEY!,
-    });
-  }
-  return clerkClient;
+interface ClerkMiddlewareOptions {
+  secretKey: string;
+  publishableKey: string;
 }
 
-export function clerkMiddleware() {
+export function clerkMiddleware({ secretKey, publishableKey }: ClerkMiddlewareOptions) {
+  const clerk = createClerkClient({ secretKey, publishableKey });
+
   return createMiddleware<AppEnv>(async (c, next) => {
-    const clerk = getClerkClient();
-
     const authResult = await clerk.authenticateRequest(c.req.raw);
-    const { isAuthenticated, toAuth } = authResult;
 
-    if (!isAuthenticated) {
+    if (!authResult.isAuthenticated) {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const { userId } = toAuth();
-
-    c.set("userId", userId);
+    c.set("userId", authResult.toAuth().userId);
 
     await next();
   });
