@@ -1,8 +1,9 @@
 import z from "zod";
 
 const envSchema = z.object({
-  CLERK_SECRET_KEY: z.string(),
-  CLERK_PUBLISHABLE_KEY: z.string(),
+  JWT_SECRET: z.string(),
+  JWT_ACCESS_EXPIRY: z.string().optional().default("15m"),
+  JWT_REFRESH_EXPIRY: z.string().optional().default("7d"),
   DATABASE_URL: z.string(),
   DATABASE_AUTH_TOKEN: z.string().optional(),
   CORS_ORIGINS: z

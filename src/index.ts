@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { migrator } from "./db/migrator";
-import { clerkMiddleware } from "./clerk-middleware";
+import { authMiddleware } from "./auth-middleware";
+import { authRouter } from "./auth-routes";
 import { backupRouter } from "./backup-routes";
 import { env } from "./env";
 
@@ -22,12 +23,8 @@ if (migrationResult.error) {
 const app = new Hono<AppEnv>()
   .use(cors({ origin: env.CORS_ORIGINS }))
   .get("/status", (c) => c.json({ status: "ok" }))
-  .use(
-    clerkMiddleware({
-      secretKey: env.CLERK_SECRET_KEY,
-      publishableKey: env.CLERK_PUBLISHABLE_KEY,
-    }),
-  )
+  .route("/v0/auth", authRouter)
+  .use(...authMiddleware(env.JWT_SECRET))
   .route("/v0/backup", backupRouter);
 
 const port = Number(process.env.PORT ?? 3000);
